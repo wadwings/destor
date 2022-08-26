@@ -9,6 +9,7 @@
 struct index_overhead index_overhead;
 
 struct index_buffer index_buffer;
+GHashTable *fp_to_superfps;
 struct index_buffer index_buffer_post_compress;
 
 gboolean g_feature_equal(char *a, char *b)
@@ -132,6 +133,7 @@ void init_index()
 
   init_fingerprint_cache();
 
+  init_fp_to_superfps();
   index_overhead.lookup_requests = 0;
   index_overhead.update_requests = 0;
   index_overhead.lookup_requests_for_unique = 0;
@@ -143,6 +145,11 @@ void init_index()
 void close_index()
 {
   close_kvstore();
+}
+
+void init_fp_to_superfps()
+{
+  fp_to_superfps = g_hash_table_new_full(g_int64_hash, g_fingerprint_equal, NULL, NULL);
 }
 
 extern struct
@@ -157,8 +164,6 @@ extern struct
 struct index_buffer index_buffer;
 
 struct index_overhead index_overhead;
-
-
 
 static void resemble_detection(struct segment *s)
 {
@@ -213,7 +218,7 @@ static void resemble_detection(struct segment *s)
     //   }
     // }
 
-    if (!CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS))
+    if (!CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS) || !CHECK_CHUNK(c, CHUNK_DUPLICATE))
     {
       /* Searching in key-value store */
       for (int i = 0; i < SUPER_FINGERPRINT_SIZE; i++)
@@ -248,19 +253,71 @@ static void resemble_detection(struct segment *s)
         }
       }
     }
+    if (!CHECK_CHUNK(c, CHUNK_DUPLICATE))
+    {
+      for (int i = 0; i < SUPER_FINGERPRINT_SIZE; i++)
+      {
+        GQueue *tq = g_hash_table_lookup(fp_to_superfps, &c->fp);
+        if (tq == NULL)
+        {
+          tq = g_queue_new();
+          g_hash_table_insert(fp_to_superfps, &c->fp, tq);
+        }
+        fingerprint *t = (fingerprint *)malloc(sizeof(fingerprint));
+        memcpy(t, &subchunks->super_features[i], sizeof(fingerprint));
+        g_queue_push_tail(tq, t);
+      }
+    }
 
     /* Insert it into the index buffer  */
-    struct indexElem **nes = (struct indexElem **)malloc(sizeof(struct indexElem*));
-    for(int i = 0; i < SUPER_FINGERPRINT_SIZE; i++)
+    struct indexElem **nes = (struct indexElem **)malloc(sizeof(struct indexElem *));
+    for (int i = 0; i < SUPER_FINGERPRINT_SIZE; i++)
     {
       nes[i] = (struct indexElem *)malloc(sizeof(struct indexElem));
       nes[i]->id = c->id;
       memcpy(&nes[i]->fp, &c->fp, sizeof(fingerprint));
       g_queue_push_tail(tqs[i], nes[i]);
       g_hash_table_replace(index_buffer_post_compress.buffered_fingerprints, &subchunks->super_features[i], tqs[i]);
+      index_buffer_post_compress.chunk_num++;
     }
 
-    index_buffer_post_compress.chunk_num++;
+    free(nes);
+    free(tqs);
+  }
+}
+
+void index_update_post_compress(GSequence *chunks, int64_t id)
+{
+  GSequenceIter *iter = g_sequence_get_begin_iter(chunks);
+  GSequenceIter *end = g_sequence_get_end_iter(chunks);
+  for (; iter != end; iter = g_sequence_iter_next(iter))
+  {
+    struct chunk *c = g_sequence_get(iter);
+    if (CHECK_CHUNK(c, CHUNK_DUPLICATE))
+    {
+      continue;
+    }
+    GQueue* tq = g_hash_table_lookup(fp_to_superfps, c->fp);
+    fingerprint *t;
+
+    assert(tq != NULL);
+
+    while(!g_queue_is_empty(tq))
+    {
+      t = g_queue_pop_head(tq);
+      kvstore_update_post_compress((char *)t, id, c->fp);
+      GQueue* index_buffer_tq = g_hash_table_lookup(index_buffer_post_compress.buffered_fingerprints, t);
+      while(!g_queue_is_empty(index_buffer_tq)){
+        struct indexElem * em = g_queue_pop_head(index_buffer_tq);
+        free(em);
+      }
+      g_queue_free(index_buffer_tq);
+      g_hash_table_remove(index_buffer_post_compress.buffered_fingerprints, t);
+      index_buffer_post_compress.chunk_num--;
+      free(t);
+    }
+    g_queue_free(tq);
+    g_hash_table_remove(fp_to_superfps, c->fp);
   }
 }
 
@@ -408,7 +465,21 @@ int index_lookup_resemble(struct segment *s)
   {
     DEBUG("The index buffer is full (%d chunks in buffer)",
           index_buffer.chunk_num);
-    return 0;
+    GHashTableIter iter;
+    gpointer key, value;
+    GQueue *tq;
+    struct indexElem *ne;
+    g_hash_table_iter_init(&iter, index_buffer_post_compress.buffered_fingerprints);
+    while (g_hash_table_iter_next(&iter, &key, &value))
+    {
+      tq = g_hash_table_iter_get_value(&iter);
+      while (!g_queue_is_empty(tq))
+      {
+        ne = g_queue_pop_head(tq);
+        kvstore_update_post_compress(key, ne->id, (char *)&ne->fp);
+      }
+      index_buffer.chunk_num--;
+    }
   }
 
   TIMER_DECLARE(1);

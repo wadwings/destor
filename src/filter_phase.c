@@ -16,7 +16,7 @@ struct
   /* In order to facilitate sampling in container,
    * we keep a list for chunks in container buffer. */
   GSequence *chunks;
-} storage_buffer, storage_buffer_post_compress;
+} storage_buffer;
 
 extern struct
 {
@@ -117,7 +117,7 @@ static void *filter_thread(void *arg)
         }
       }
 
-      if ((CHECK_CHUNK(c, CHUNK_DUPLICATE) ||CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS))&& c->id == TEMPORARY_ID)
+      if ((CHECK_CHUNK(c, CHUNK_DUPLICATE) || CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS)) && c->id == TEMPORARY_ID)
       {
         struct chunk *ruc = g_hash_table_lookup(recently_unique_chunks, &c->fp);
         assert(ruc);
@@ -144,12 +144,6 @@ static void *filter_thread(void *arg)
           if (destor.index_category[1] == INDEX_CATEGORY_PHYSICAL_LOCALITY)
             storage_buffer.chunks = g_sequence_new(free_chunk);
         }
-        // if (storage_buffer_post_compress.container_buffer == NULL)
-        // {
-        //   storage_buffer_post_compress.container_buffer = create_container();
-        //             if (destor.index_category[1] == INDEX_CATEGORY_PHYSICAL_LOCALITY)
-        //     storage_buffer_post_compress.chunks = g_sequence_new(free_chunk);
-        // }
 
         if (container_overflow(storage_buffer.container_buffer, c->size))
         {
@@ -162,6 +156,7 @@ static void *filter_thread(void *arg)
              */
             GHashTable *features = sampling(storage_buffer.chunks,
                                             g_sequence_get_length(storage_buffer.chunks)); // some fingerprints of chunks in the container?
+            index_update_post_compress(storage_buffer.chunks, get_container_id(storage_buffer.container_buffer));
             index_update(features, get_container_id(storage_buffer.container_buffer));
             g_hash_table_destroy(features);
             g_sequence_free(storage_buffer.chunks);
@@ -187,7 +182,8 @@ static void *filter_thread(void *arg)
             VERBOSE("Filter phase: %dth chunk is recently unique, size %d", chunk_num,
                     g_hash_table_size(recently_unique_chunks));
           }
-          else if(CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS)){
+          else if (CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS))
+          {
             jcr.post_compress_chunk_num++;
             jcr.post_compress_chunk_size += c->size;
           }
@@ -238,7 +234,7 @@ static void *filter_thread(void *arg)
       chunk_num++;
     }
 
-    int full = index_update_buffer(s); //wings-TODO
+    int full = index_update_buffer(s); // wings-TODO
 
     /* Write a SEGMENT_BEGIN */
     segmentid sid = append_segment_flag(jcr.bv, CHUNK_SEGMENT_START, s->chunk_num);
@@ -356,6 +352,7 @@ static void *filter_thread(void *arg)
        */
       GHashTable *features = sampling(storage_buffer.chunks,
                                       g_sequence_get_length(storage_buffer.chunks));
+      index_update_post_compress(storage_buffer.chunks, get_container_id(storage_buffer.container_buffer));
       index_update(features, get_container_id(storage_buffer.container_buffer));
       g_hash_table_destroy(features);
       g_sequence_free(storage_buffer.chunks);

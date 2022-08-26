@@ -23,7 +23,7 @@ void (*kvstore_delete)(char* key, int64_t id);
 
 void (*close_kvstore_post_compress)();
 int64_t* (*kvstore_lookup_post_compress)(char *key);
-void (*kvstore_update_post_compress)(char *key, int64_t id, fingerprint fp);
+void (*kvstore_update_post_compress)(char* key, int64_t id, fingerprint fp);
 void (*kvstore_delete_post_compress)(char* key, int64_t id);
 
 void init_kvstore() {
