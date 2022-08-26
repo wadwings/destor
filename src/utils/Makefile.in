@@ -106,7 +106,7 @@ libutils_a_AR = $(AR) $(ARFLAGS)
 libutils_a_LIBADD =
 am_libutils_a_OBJECTS = lru_cache.$(OBJEXT) sync_queue.$(OBJEXT) \
 	queue.$(OBJEXT) serial.$(OBJEXT) bloom_filter.$(OBJEXT) \
-	sds.$(OBJEXT)
+	sds.$(OBJEXT) xdelta3.$(OBJEXT)
 libutils_a_OBJECTS = $(am_libutils_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -126,7 +126,7 @@ am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/bloom_filter.Po \
 	./$(DEPDIR)/lru_cache.Po ./$(DEPDIR)/queue.Po \
 	./$(DEPDIR)/sds.Po ./$(DEPDIR)/serial.Po \
-	./$(DEPDIR)/sync_queue.Po
+	./$(DEPDIR)/sync_queue.Po ./$(DEPDIR)/xdelta3.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -258,7 +258,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 noinst_LIBRARIES = libutils.a
-libutils_a_SOURCES = lru_cache.c sync_queue.c queue.c serial.c bloom_filter.c sds.c
+libutils_a_SOURCES = lru_cache.c sync_queue.c queue.c serial.c bloom_filter.c sds.c xdelta3.c
 all: all-am
 
 .SUFFIXES:
@@ -313,6 +313,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sds.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/serial.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sync_queue.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xdelta3.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -464,6 +465,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/sds.Po
 	-rm -f ./$(DEPDIR)/serial.Po
 	-rm -f ./$(DEPDIR)/sync_queue.Po
+	-rm -f ./$(DEPDIR)/xdelta3.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -515,6 +517,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/sds.Po
 	-rm -f ./$(DEPDIR)/serial.Po
 	-rm -f ./$(DEPDIR)/sync_queue.Po
+	-rm -f ./$(DEPDIR)/xdelta3.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

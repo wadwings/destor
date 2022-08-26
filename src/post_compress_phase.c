@@ -26,7 +26,7 @@ struct
   int wait_threshold;
 } post_compress_index_lock;
 
-void send_segment(struct segment *s)
+void send_segment_post_compress(struct segment *s)
 {
   /*
    * CHUNK_SEGMENT_START and _END are used for
@@ -103,12 +103,13 @@ void *post_compress_thread(void *arg)
       VERBOSE("Post Compress phase: the %lldth segment of %lld chunks", segment_num++,
               s->chunk_num);
       /* Each duplicate chunk will be marked. */
-      pthread_mutex_lock(&post_compress_index_lock.mutex);
-      while (index_lookup_resemble(s) == 0)
-      {
-        pthread_cond_wait(&post_compress_index_lock.cond, &post_compress_index_lock.mutex);
-      }
-      pthread_mutex_unlock(&post_compress_index_lock.mutex);
+      index_lookup_resemble(s);
+      // pthread_mutex_lock(&post_compress_index_lock.mutex);
+      // while (index_lookup_resemble(s) == 0)
+      // {
+      //   pthread_cond_wait(&post_compress_index_lock.cond, &post_compress_index_lock.mutex);
+      // }
+      // pthread_mutex_unlock(&post_compress_index_lock.mutex);
     }
     else
     {
@@ -116,7 +117,7 @@ void *post_compress_thread(void *arg)
     }
     /* Send chunks in the segment to the next phase.
      * The segment will be cleared. */
-    send_segment(s);
+    send_segment_post_compress(s);
 
     free_segment(s);
     s = NULL;
@@ -125,16 +126,9 @@ void *post_compress_thread(void *arg)
       break;
   }
 
-  sync_queue_term(dedup_queue);
+  sync_queue_term(post_compress_queue);
 
   return NULL;
-}
-
-void stop_dedup_phase()
-{
-  pthread_join(post_compress_t, NULL);
-  NOTICE("dedup phase stops successfully: %d segments of %d chunks on average",
-         segment_num, segment_num ? chunk_num / segment_num : 0);
 }
 
 void start_post_compress_phase(){
@@ -155,5 +149,7 @@ void start_post_compress_phase(){
 
 
 void stop_post_compress_phase(){
-  
+  pthread_join(post_compress_t, NULL);
+  NOTICE("dedup phase stops successfully: %d segments of %d chunks on average",
+        segment_num, segment_num ? chunk_num / segment_num : 0);
 };

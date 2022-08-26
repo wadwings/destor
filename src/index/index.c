@@ -461,26 +461,26 @@ int index_lookup_resemble(struct segment *s)
 {
 
   /* Ensure the next phase not be blocked. */
-  if (index_lock.wait_threshold > 0 && index_buffer.chunk_num >= index_lock.wait_threshold)
-  {
-    DEBUG("The index buffer is full (%d chunks in buffer)",
-          index_buffer.chunk_num);
-    GHashTableIter iter;
-    gpointer key, value;
-    GQueue *tq;
-    struct indexElem *ne;
-    g_hash_table_iter_init(&iter, index_buffer_post_compress.buffered_fingerprints);
-    while (g_hash_table_iter_next(&iter, &key, &value))
-    {
-      tq = g_hash_table_iter_get_value(&iter);
-      while (!g_queue_is_empty(tq))
-      {
-        ne = g_queue_pop_head(tq);
-        kvstore_update_post_compress(key, ne->id, (char *)&ne->fp);
-      }
-      index_buffer.chunk_num--;
-    }
-  }
+  // if (index_lock.wait_threshold > 0 && index_buffer.chunk_num >= index_lock.wait_threshold)
+  // {
+  //   DEBUG("The index buffer is full (%d chunks in buffer)",
+  //         index_buffer.chunk_num);
+  //   GHashTableIter iter;
+  //   gpointer key, value;
+  //   GQueue *tq;
+  //   struct indexElem *ne;
+  //   g_hash_table_iter_init(&iter, index_buffer_post_compress.buffered_fingerprints);
+  //   while (g_hash_table_iter_next(&iter, &key, &value))
+  //   {
+  //     tq = g_hash_table_iter_get_value(&iter);
+  //     while (!g_queue_is_empty(tq))
+  //     {
+  //       ne = g_queue_pop_head(tq);
+  //       kvstore_update_post_compress(key, ne->id, (char *)&ne->fp);
+  //     }
+  //     index_buffer.chunk_num--;
+  //   }
+  // }
 
   TIMER_DECLARE(1);
   TIMER_BEGIN(1);

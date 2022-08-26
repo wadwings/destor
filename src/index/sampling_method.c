@@ -259,7 +259,7 @@ static GHashTable *index_sampling_uniform(GSequence *chunks, int32_t chunk_num)
 const int m[12] = {1058066430, 1103835961, 2116768769, 188918377, 1826857779, 189005785, 1379540075, 1276361770, 139716908, 1747801688, 168629972, 1817848860};
 const int a[12] = {1343283062, 2059780743, 1884597173, 1079384469, 1776513971, 139568451, 1580284543, 1736553059, 1251340262, 1560972512, 98742820, 388126111};
 
-static subchunks *index_sampling_super_features(struct chunk *c)
+subchunks *index_sampling_super_features(struct chunk *c)
 {
   subchunks *res = (subchunks *)malloc(sizeof(struct subchunks));
   const int features_number = SUPER_FINGERPRINT_SIZE * FEATURES_PER_SFS;
@@ -295,7 +295,7 @@ static subchunks *index_sampling_super_features(struct chunk *c)
   return res;
 }
 
-static subchunks *index_sampling_finesse(struct chunk *c)
+subchunks *index_sampling_finesse(struct chunk *c)
 {
   subchunks *res = (subchunks *)malloc(sizeof(struct subchunks));
   const int features_number = SUPER_FINGERPRINT_SIZE * FEATURES_PER_SFS;
