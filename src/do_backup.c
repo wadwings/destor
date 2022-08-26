@@ -37,6 +37,7 @@ void do_backup(char *path) {
 		start_hash_phase();
 	}
 	start_dedup_phase();
+  start_post_compress_phase();
 	start_rewrite_phase();
 	start_filter_phase();
 
@@ -57,6 +58,7 @@ void do_backup(char *path) {
 		stop_hash_phase();
 	}
 	stop_dedup_phase();
+  stop_post_compress_phase();
 	stop_rewrite_phase();
 	stop_filter_phase();
 

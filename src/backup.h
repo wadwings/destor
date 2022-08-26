@@ -37,6 +37,13 @@ void stop_read_trace_phase();
  */
 void start_dedup_phase();
 void stop_dedup_phase();
+
+/*
+ * Do some post compression
+ */
+void start_post_compress_phase();
+void stop_post_compress_phase();
+
 /*
  * Fragmented chunks are marked CHUNK_SPARSE, CHUNK_OUT_OF_ORDER or CHUNK_NOT_IN_CACHE.
  */
@@ -66,6 +73,8 @@ SyncQueue* hash_queue;
 SyncQueue* trace_queue;
 /* Output of dedup phase */
 SyncQueue* dedup_queue;
+/* Output of post compress phase */
+SyncQueue* post_compress_queue;
 /* Output of rewrite phase. */
 SyncQueue* rewrite_queue;
 

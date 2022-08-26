@@ -4,16 +4,18 @@
  * If a segment boundary is found, return the segment;
  * else return NULL.
  */
-struct segment* (*segmenting)(struct chunk *c);
+struct segment* (*segmenting)(struct chunk *c, struct segment *tmp);
 
 /*
  * Used by SiLo and Block Locality Caching.
  */
-static struct segment* segment_fixed(struct chunk * c) {
-    static struct segment* tmp;
+static struct segment* segment_fixed(struct chunk * c, struct segment *tmp) {
     if (tmp == NULL)
         tmp = new_segment();
 
+    if (CHECK_CHUNK(c, CHUNK_SEGMENT_START) || CHECK_CHUNK(c, CHUNK_SEGMENT_END)){
+      return NULL;
+    }
     if (c == NULL)
         /* The end of stream */
         return tmp;
@@ -33,15 +35,13 @@ static struct segment* segment_fixed(struct chunk * c) {
         tmp = NULL;
         return ret;
     }
-
     return NULL;
 }
 
 /*
  * Used by Extreme Binning.
  */
-static struct segment* segment_file_defined(struct chunk *c) {
-    static struct segment* tmp;
+static struct segment* segment_file_defined(struct chunk *c, struct segment *tmp) {
     /*
      * For file-defined segmenting,
      * the end is not a new segment.
@@ -49,6 +49,9 @@ static struct segment* segment_file_defined(struct chunk *c) {
     if (tmp == NULL)
         tmp = new_segment();
 
+    if (CHECK_CHUNK(c, CHUNK_SEGMENT_START) || CHECK_CHUNK(c, CHUNK_SEGMENT_END)){
+      return NULL;
+    }
     if (c == NULL)
         return tmp;
 
@@ -69,12 +72,13 @@ static struct segment* segment_file_defined(struct chunk *c) {
 /*
  * Used by Sparse Index.
  */
-static struct segment* segment_content_defined(struct chunk *c) {
-    static struct segment* tmp;
-
+static struct segment* segment_content_defined(struct chunk *c, struct segment *tmp) {
     if (tmp == NULL)
         tmp = new_segment();
-
+    
+    if (CHECK_CHUNK(c, CHUNK_SEGMENT_START) || CHECK_CHUNK(c, CHUNK_SEGMENT_END)){
+      return NULL;
+    }
     if (c == NULL)
         /* The end of stream */
         return tmp;
@@ -86,7 +90,7 @@ static struct segment* segment_content_defined(struct chunk *c) {
 
     /* Avoid too small segment. */
     if (tmp->chunk_num < destor.index_segment_min) {
-    	g_sequence_append(tmp->chunks, c);
+    	  g_sequence_append(tmp->chunks, c);
         tmp->chunk_num++;
         return NULL;
     }

@@ -34,11 +34,18 @@ void index_check_buffer(struct segment *s);
 int index_update_buffer(struct segment *s);
 
 //void index_delete(fingerprint *);
+typedef struct post_compress_entry{
+  int64_t id;
+  fingerprint fp;
+}post_compress_entry;
 
 extern GHashTable* (*sampling)(GSequence *chunks, int32_t chunk_num);
-extern struct segment* (*segmenting)(struct chunk *c);
+extern struct segment* (*segmenting)(struct chunk *c, struct segment *tmp);
 
 gboolean g_feature_equal(char* a, char* b);
 guint g_feature_hash(char *feature);
-
+static subchunks *index_sampling_super_features(struct chunk *c);
+static subchunks *index_sampling_finesse(struct chunk *c);
+unsigned int rabin_function(unsigned char *data, unsigned int size, int index);
+int index_lookup_resemble(struct segment *s);
 #endif

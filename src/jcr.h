@@ -34,7 +34,8 @@ struct jcr{
 	int64_t zero_chunk_size;
 	int32_t rewritten_chunk_num;
 	int64_t rewritten_chunk_size;
-
+  int64_t post_compress_chunk_num;
+  int64_t post_compress_chunk_size;
 	int32_t sparse_container_num;
 	int32_t inherited_sparse_num;
 	int32_t total_container_num;

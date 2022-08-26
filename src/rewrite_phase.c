@@ -109,7 +109,7 @@ struct chunk* rewrite_buffer_pop() {
  */
 static void* no_rewrite(void* arg) {
 	while (1) {
-		struct chunk* c = sync_queue_pop(dedup_queue);
+		struct chunk* c = sync_queue_pop(post_compress_queue);
 
 		if (c == NULL)
 			break;

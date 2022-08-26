@@ -22,6 +22,7 @@
 #include <errno.h>
 #include <assert.h>
 #include <inttypes.h>
+#include <openssl/md5.h>
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -169,6 +170,7 @@
 /* states of normal chunks. */
 #define CHUNK_UNIQUE (0x0000)
 #define CHUNK_DUPLICATE (0x0100)
+#define CHUNK_DELTA_COMPRESS (0x0040)
 #define CHUNK_SPARSE (0x0200)
 #define CHUNK_OUT_OF_ORDER (0x0400)
 /* IN_CACHE will deny rewriting an out-of-order chunk */
@@ -190,6 +192,10 @@
 #define UNSET_CHUNK(c, f) (c->flag &= ~f)
 #define CHECK_CHUNK(c, f) (c->flag & f)
 
+/* The following macros are used for post compression sampling */
+#define SUPER_FINGERPRINT_SIZE 3
+#define FEATURES_PER_SFS 4
+#define SLIDING_WINDOW_SIZE 48
 struct destor {
 	sds working_directory;
 	int simulation_level;
@@ -281,6 +287,7 @@ struct destor {
 } destor;
 
 typedef unsigned char fingerprint[20];
+typedef unsigned char super_feature[MD5_DIGEST_LENGTH];
 typedef int64_t containerid; //container id
 typedef int64_t segmentid;
 
@@ -301,6 +308,13 @@ struct segment {
 	GHashTable* features;
 };
 
+struct subchunks{
+  struct chunk * chunk;
+  fingerprint* super_features;
+};
+
+typedef struct subchunks subchunks;
+
 struct chunk* new_chunk(int32_t);
 void free_chunk(struct chunk*);
 
@@ -309,6 +323,8 @@ struct segment* new_segment_full();
 void free_segment(struct segment* s);
 
 gboolean g_fingerprint_equal(fingerprint* fp1, fingerprint* fp2);
+gboolean g_super_feature_equal(super_feature* fp1, super_feature* fp2);
+
 gint g_fingerprint_cmp(fingerprint* fp1, fingerprint* fp2, gpointer user_data);
 gint g_chunk_cmp(struct chunk* a, struct chunk* b, gpointer user_data);
 

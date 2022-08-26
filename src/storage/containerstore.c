@@ -15,7 +15,8 @@ static SyncQueue* container_buffer;
 struct metaEntry {
 	int32_t off;
 	int32_t len;
-	fingerprint fp;
+	int32_t delta_compress_enable; 
+  fingerprint fp;
 };
 
 /*
@@ -160,6 +161,7 @@ void write_container(struct container* c) {
 			ser_bytes(&me->fp, sizeof(fingerprint));
 			ser_bytes(&me->len, sizeof(int32_t));
 			ser_bytes(&me->off, sizeof(int32_t));
+      ser_bytes(&me->delta_compress_enable, sizeof(int32_t));
 		}
 
 		ser_end(cur, CONTAINER_META_SIZE);
@@ -194,6 +196,7 @@ void write_container(struct container* c) {
 			ser_bytes(&me->fp, sizeof(fingerprint));
 			ser_bytes(&me->len, sizeof(int32_t));
 			ser_bytes(&me->off, sizeof(int32_t));
+      ser_bytes(&me->delta_compress_enable, sizeof(int32_t));
 		}
 
 		ser_end(buf, CONTAINER_META_SIZE);
@@ -268,6 +271,7 @@ struct container* retrieve_container_by_id(containerid id) {
 		unser_bytes(&me->fp, sizeof(fingerprint));
 		unser_bytes(&me->len, sizeof(int32_t));
 		unser_bytes(&me->off, sizeof(int32_t));
+    unser_bytes(&me->delta_compress_enable, sizeof(int32_t));
 		g_hash_table_insert(c->meta.map, &me->fp, me);
 	}
 
@@ -349,6 +353,7 @@ struct containerMeta* retrieve_container_meta_by_id(containerid id) {
 		unser_bytes(&me->fp, sizeof(fingerprint));
 		unser_bytes(&me->len, sizeof(int32_t));
 		unser_bytes(&me->off, sizeof(int32_t));
+    unser_bytes(&me->delta_compress_enable, sizeof(int32_t));
 		g_hash_table_insert(cm->map, &me->fp, me);
 	}
 
@@ -383,7 +388,7 @@ int container_overflow(struct container* c, int32_t size) {
 	/*
 	 * 28 is the size of metaEntry.
 	 */
-	if ((c->meta.chunk_num + 1) * 28 + 16 > CONTAINER_META_SIZE)
+	if ((c->meta.chunk_num + 1) * sizeof(struct metaEntry) + 16 > CONTAINER_META_SIZE)
 		return 1;
 	return 0;
 }
@@ -405,6 +410,10 @@ int add_chunk_to_container(struct container* c, struct chunk* ck) {
 	memcpy(&me->fp, &ck->fp, sizeof(fingerprint));
 	me->len = ck->size;
 	me->off = c->meta.data_size;
+  if(CHECK_CHUNK(ck, CHUNK_DELTA_COMPRESS))
+    me->delta_compress_enable = 1;
+  else
+    me->delta_compress_enable = 0;
 
 	g_hash_table_insert(c->meta.map, &me->fp, me);
 	c->meta.chunk_num++;
