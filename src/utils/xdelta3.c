@@ -6,201 +6,266 @@
 
 //---------------------------------------------------------------------------
 
-
-
 #include <stdio.h>
 #include <sys/stat.h>
+#include "xdelta3.h"
 #include "../xdelta3/xdelta3.h"
 #include "../xdelta3/xdelta3.c"
-
 //---------------------------------------------------------------------------
 
-int code (
-  int encode,
-  FILE*  InFile,
-  FILE*  SrcFile ,
-  FILE* OutFile,
-  int BufSize )
+#define MAX(x, y) ((x) > (y) ? (x) : (y))
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
+
+int code(
+    int encode,
+    char *src,
+    char *in,
+    int src_len,
+    int in_len,
+    char *out)
 {
-  int r, ret;
+  int r, ret, in_read = 0, outbuflen = 0;
   struct stat statbuf;
   xd3_stream stream;
   xd3_config config;
   xd3_source source;
-  void* Input_Buf;
+  void *Input_Buf;
   int Input_Buf_Read;
-
-  if (BufSize < XD3_ALLOCSIZE)
-    BufSize = XD3_ALLOCSIZE;
-
-  memset (&stream, 0, sizeof (stream));
-  memset (&source, 0, sizeof (source));
-
+  const int BufSize = XD3_ALLOCSIZE;
+  memset(&stream, 0, sizeof(stream));
+  memset(&source, 0, sizeof(source));
   xd3_init_config(&config, XD3_ADLER32);
   config.winsize = BufSize;
   xd3_config_stream(&stream, &config);
 
-  if (SrcFile)
+  if (src_len)
   {
-    r = fstat(fileno(SrcFile), &statbuf);
-    if (r)
-      return r;
-
+    // r = fstat(fileno(SrcFile), &statbuf);
+    // if (r)
+    //   return r;
+    
     source.blksize = BufSize;
+    int src_buffer_size = MIN(src_len, source.blksize);
     source.curblk = malloc(source.blksize);
-
+    memcpy(source.curblk, src, src_buffer_size);
     /* Load 1st block of stream. */
-    r = fseek(SrcFile, 0, SEEK_SET);
-    if (r)
-      return r;
-    source.onblk = fread((void*)source.curblk, 1, source.blksize, SrcFile);
+    // r = fseek(SrcFile, 0, SEEK_SET);
+    // if (r)
+    //   return r;
+    // source.onblk = fread((void*)source.curblk, 1, source.blksize, SrcFile);
+    source.onblk = src_buffer_size;
     source.curblkno = 0;
     /* Set the stream. */
+    src_len -= src_buffer_size;
     xd3_set_source(&stream, &source);
   }
 
   Input_Buf = malloc(BufSize);
 
-  fseek(InFile, 0, SEEK_SET);
+  // fseek(InFile, 0, SEEK_SET);
   do
   {
-    Input_Buf_Read = fread(Input_Buf, 1, BufSize, InFile);
+    Input_Buf_Read = MIN(BufSize, in_len);
+    memcpy(Input_Buf, in + in_read, Input_Buf_Read);
+    in_len -= Input_Buf_Read;
+    in_read += Input_Buf_Read;
     if (Input_Buf_Read < BufSize)
     {
       xd3_set_flags(&stream, XD3_FLUSH | stream.flags);
     }
     xd3_avail_input(&stream, Input_Buf, Input_Buf_Read);
-
-process:
-    if (encode)
-      ret = xd3_encode_input(&stream);
-    else
-      ret = xd3_decode_input(&stream);
-
-    switch (ret)
+    int while_n_break = 1;
+    while (while_n_break)
     {
-    case XD3_INPUT:
-      {
-        fprintf (stderr,"XD3_INPUT\n");
-        continue;
-      }
 
-    case XD3_OUTPUT:
-      {
-        fprintf (stderr,"XD3_OUTPUT\n");
-        r = fwrite(stream.next_out, 1, stream.avail_out, OutFile);
-        if (r != (int)stream.avail_out)
-          return r;
-	xd3_consume_output(&stream);
-        goto process;
-      }
+      if (encode)
+        ret = xd3_encode_input(&stream);
+      else
+        ret = xd3_decode_input(&stream);
 
-    case XD3_GETSRCBLK:
+      switch (ret)
       {
-        fprintf (stderr,"XD3_GETSRCBLK %qd\n", source.getblkno);
-        if (SrcFile)
+        case XD3_INPUT:
         {
-          r = fseek(SrcFile, source.blksize * source.getblkno, SEEK_SET);
-          if (r)
-            return r;
-          source.onblk = fread((void*)source.curblk, 1,
-			       source.blksize, SrcFile);
-          source.curblkno = source.getblkno;
+          fprintf(stderr, "XD3_INPUT\n");
+          while_n_break = 0;
+          break;
         }
-        goto process;
-      }
 
-    case XD3_GOTHEADER:
-      {
-        fprintf (stderr,"XD3_GOTHEADER\n");
-        goto process;
-      }
+        case XD3_OUTPUT:
+        {
+          fprintf(stderr, "XD3_OUTPUT\n");
 
-    case XD3_WINSTART:
-      {
-        fprintf (stderr,"XD3_WINSTART\n");
-        goto process;
-      }
+          memcpy(out + outbuflen, stream.next_out, stream.avail_out);
+          outbuflen += stream.avail_out;
+          // r = fwrite(stream.next_out, 1, stream.avail_out, OutFile);
 
-    case XD3_WINFINISH:
-      {
-        fprintf (stderr,"XD3_WINFINISH\n");
-        goto process;
-      }
+          // if (r != (int)stream.avail_out)
+          //   return r;
 
-    default:
-      {
-        fprintf (stderr,"!!! INVALID %s %d !!!\n",
-		stream.msg, ret);
-        return ret;
-      }
+          xd3_consume_output(&stream);
+          break;
+        }
 
+        case XD3_GETSRCBLK:
+        {
+          fprintf(stderr, "XD3_GETSRCBLK %qd\n", source.getblkno);
+          if (src_len)
+          {
+            int src_buffer_size = MIN(src_len, source.blksize);
+            memcpy(source.curblk, src + source.blksize * source.getblkno, src_buffer_size);
+
+            // r = fseek(SrcFile, source.blksize * source.getblkno, SEEK_SET);
+            // if (r)
+            //   return r;
+            source.onblk = src_buffer_size;
+            source.curblkno = source.getblkno;
+            src_len -= src_buffer_size;
+          }
+          break;
+        }
+
+        case XD3_GOTHEADER:
+        {
+          fprintf(stderr, "XD3_GOTHEADER\n");
+          break;
+        }
+
+        case XD3_WINSTART:
+        {
+          fprintf(stderr, "XD3_WINSTART\n");
+          break;
+        }
+
+        case XD3_WINFINISH:
+        {
+          fprintf(stderr, "XD3_WINFINISH\n");
+          break;
+        }
+
+        default:
+        {
+          fprintf(stderr, "!!! INVALID %s %d !!!\n",
+                  stream.msg, ret);
+          *out = NULL;
+          return -1;
+        }
+      }
     }
-
-  }
-  while (Input_Buf_Read == BufSize);
+  } while (Input_Buf_Read == BufSize);
 
   free(Input_Buf);
 
-  free((void*)source.curblk);
+  free((void *)source.curblk);
   xd3_close_stream(&stream);
   xd3_free_stream(&stream);
 
-  return 0;
-
+  return outbuflen;
 };
 
-
-int main(int argc, char* argv[])
-{
-  FILE*  InFile;
-  FILE*  SrcFile;
-  FILE* OutFile;
+int xdelta3_encode(char *src, char *in, int srclen, int inlen, char *out){
   int r;
 
-  if (argc != 3) {
-    fprintf (stderr, "usage: %s source input\n", argv[0]);
-    return 1;
-  }
+  // if (argc != 4)
+  // {
+  //   fprintf(stderr, "usage: %s source input\n", argv[0]);
+  //   return 1;
+  // }
+  // char *src = (char*)malloc(50000 * sizeof(char));
+  // char *in = (char*)malloc(50000 * sizeof(char));
+  // char *out = (char*)malloc(50000 * sizeof(char));
 
-  char *input = argv[2];
-  char *source = argv[1];
-  const char *output = "encoded.testdata";
-  const char *decoded = "decoded.testdata";
+  // FILE *src_file = fopen(argv[1], "r");
+  // FILE *in_file = fopen(argv[2], "r");
+  // FILE *out_file = fopen(argv[3], "w");
+  
+  // int outlen, srclen, inlen;
+  int outlen;
 
+  // srclen = fread(src, 1, 50000, src_file);
+  // inlen = fread(in, 1, 50000, in_file);
   /* Encode */
 
-  InFile = fopen(input, "rb");
-  SrcFile = fopen(source, "rb");
-  OutFile = fopen(output, "wb");
 
-  r = code (1, InFile, SrcFile, OutFile, 0x1000);
+  r = code(1, src, in, srclen, inlen, out);
 
-  fclose(OutFile);
-  fclose(SrcFile);
-  fclose(InFile);
-
-  if (r) {
-    fprintf (stderr, "Encode error: %d\n", r);
+  if (r == -1)
+  {
+    fprintf(stderr, "Encode error: %d\n", r);
     return r;
+  }else{
+    outlen = r;
   }
+
+  // fwrite(out, sizeof(char), outlen, out_file);
 
   /* Decode */
 
-  InFile = fopen(output, "rb");
-  SrcFile = fopen(source, "rb");
-  OutFile = fopen(decoded, "wb");
+  // r = code(0, InFile, SrcFile, OutFile, 0x1000);
 
-  r = code (0, InFile, SrcFile, OutFile, 0x1000);
+  // fclose(src_file);
+  // fclose(in_file);
+  // fclose(out_file);
 
-  fclose(OutFile);
-  fclose(SrcFile);
-  fclose(InFile);
+  // if (r)
+  // {
+  //   fprintf(stderr, "Decode error: %d\n", r);
+  //   return r;
+  // }
 
-  if (r) {
-    fprintf (stderr, "Decode error: %d\n", r);
+  return outlen;
+}
+
+int xdelta3_decode(char *src, char *in, int srclen, int inlen, char *out){
+
+  // if (argc != 4)
+  // {
+  //   fprintf(stderr, "usage: %s source input\n", argv[0]);
+  //   return 1;
+  // }
+  // char *src = (char*)malloc(50000 * sizeof(char));
+  // char *in = (char*)malloc(50000 * sizeof(char));
+  // char *out = (char*)malloc(50000 * sizeof(char));
+
+  // FILE *src_file = fopen(argv[1], "r");
+  // FILE *in_file = fopen(argv[2], "r");
+  // FILE *out_file = fopen(argv[3], "w");
+  
+  // int outlen, srclen, inlen;
+
+  // srclen = fread(src, 1, 50000, src_file);
+  // inlen = fread(in, 1, 50000, in_file);
+  /* Encode */
+
+  int outlen;
+  int r;
+
+  r = code(0, src, in, srclen, inlen, out);
+
+  if (r == -1)
+  {
+    fprintf(stderr, "Encode error: %d\n", r);
     return r;
+  }else{
+    outlen = r;
   }
 
-  return 0;
+  return outlen;
+
+  // fwrite(out, sizeof(char), outlen, out_file);
+
+  // /* Decode */
+
+  // // r = code(0, InFile, SrcFile, OutFile, 0x1000);
+
+  // fclose(src_file);
+  // fclose(in_file);
+  // fclose(out_file);
+
+  // if (r)
+  // {
+  //   fprintf(stderr, "Decode error: %d\n", r);
+  //   return r;
+  // }
+
 }
