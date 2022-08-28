@@ -48,9 +48,9 @@ static void* lru_restore_thread(void *arg) {
 			}
       struct chunk *rc;
       if(CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS)){
-
+        rc = get_chunk_in_container_post_compress(con, c->id);
       }
-			struct chunk *rc = get_chunk_in_container(con, &c->fp);
+			rc = get_chunk_in_container(con, &c->fp);
 			assert(rc);
 			TIMER_END(1, jcr.read_chunk_time);
 			sync_queue_push(restore_chunk_queue, rc);

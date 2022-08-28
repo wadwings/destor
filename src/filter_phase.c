@@ -6,7 +6,7 @@
 #include "backup.h"
 #include "index/index.h"
 #include "utils/xdelta3.h"
-#include "kvstore.h"
+#include "index/kvstore.h"
 
 static pthread_t filter_t;
 static int64_t chunk_num;
@@ -129,8 +129,8 @@ static void *filter_thread(void *arg)
         // use xdelta to compute the delta information from unique chunk
       }
       if(CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS)){
-        fingerprint fp = kvstore_lookup_fp_to_fp(c->fp);
-        struct chunk *ruc = g_hash_table_lookup(recently_unique_chunks, fp);
+        char *fp = kvstore_lookup_fp_to_fp(c->fp);
+        struct chunk *ruc = g_hash_table_lookup(recently_unique_chunks, &fp);
         if(ruc){
           char *t = (char *)malloc(c->size);
           c->size = xdelta3_encode(ruc->data, c->data, ruc->size, c->size, t);
@@ -261,6 +261,7 @@ static void *filter_thread(void *arg)
     }
 
     int full = index_update_buffer(s); // wings-TODO
+    //index_update_buffer_post_compress(s);
 
     /* Write a SEGMENT_BEGIN */
     segmentid sid = append_segment_flag(jcr.bv, CHUNK_SEGMENT_START, s->chunk_num);

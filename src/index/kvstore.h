@@ -17,7 +17,7 @@ extern void (*kvstore_update_post_compress)(char *key, int64_t id, fingerprint f
 extern void (*kvstore_delete_post_compress)(char* key, int64_t id);
 
 extern void (*close_kvstore_fp_to_fp)();
-extern fingerprint* (*kvstore_lookup_fp_to_fp)(fingerprint fp);
+extern char* (*kvstore_lookup_fp_to_fp)(fingerprint fp);
 extern void (*kvstore_update_fp_to_fp)(fingerprint key, fingerprint value);
 extern void (*kvstore_delete_fp_to_fp)(fingerprint key);
 

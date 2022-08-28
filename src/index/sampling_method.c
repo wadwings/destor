@@ -265,6 +265,10 @@ subchunks *index_sampling_super_features(struct chunk *c)
   const int features_number = SUPER_FINGERPRINT_SIZE * FEATURES_PER_SFS;
   unsigned int features[features_number];
   unsigned int t;
+  for(int i = 0; i < features_number; i++)
+  {
+    features[i] = 0;
+  }
   for (int i = 0; i < c->size; i++)
   {
     unsigned int fingerprint = rabin_function(c->data, c->size, i);
@@ -285,7 +289,7 @@ subchunks *index_sampling_super_features(struct chunk *c)
   {
     for (int j = 0; j < FEATURES_PER_SFS; j++)
     {
-      memcpy(features_char + j * sizeof(int), features[i * FEATURES_PER_SFS + j], sizeof(int)); 
+      memcpy(features_char + j * sizeof(int), features + i * FEATURES_PER_SFS + j, sizeof(int)); 
     }
     memset(res->super_features[i], 0x00, sizeof(fingerprint));
     MD5_Init(&ctx);

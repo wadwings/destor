@@ -93,7 +93,7 @@ static void kv_update_post_compress(kvpair kv, int64_t id, fingerprint fp){
 }
 
 static void kv_update_fp_to_fp(kvpair kv, fingerprint fp){
-  fingerprint value = get_value(kv);
+  char* value = get_value_fp_to_fp(kv);
   memcpy(value, fp, sizeof(fingerprint));
 }
 
@@ -377,7 +377,7 @@ post_compress_entry* kvstore_htable_lookup_post_compress(char* key) {
 	return kv ? get_value_post_compress(kv) : NULL;
 }
 
-fingerprint* kvstore_htable_lookup_fp_to_fp(char* key) {
+char* kvstore_htable_lookup_fp_to_fp(char* key) {
 	kvpair kv = g_hash_table_lookup(htable_fp_to_fp, key);
 	return kv ? get_value_fp_to_fp(kv) : NULL;
 }
@@ -403,8 +403,8 @@ void kvstore_htable_update_post_compress(char* key, int64_t id, fingerprint fp) 
 void kvstore_htable_update_fp_to_fp(char* key, fingerprint fp) {
 	kvpair kv = g_hash_table_lookup(htable_post_compress, key);
 	if (!kv) {
-		kv = new_kvpair_full_post_compress(key);
-		g_hash_table_replace(htable_post_compress, get_key(kv), kv);
+		kv = new_kvpair_full_fp_to_fp(key);
+		g_hash_table_replace(htable_fp_to_fp, get_key(kv), kv);
 	}
 	kv_update_fp_to_fp(kv, fp);
 }

@@ -134,7 +134,6 @@ void init_index()
   init_fingerprint_cache();
 
   init_fp_to_superfps();
-  init_fp_to_post_fp();
   index_overhead.lookup_requests = 0;
   index_overhead.update_requests = 0;
   index_overhead.lookup_requests_for_unique = 0;
@@ -256,35 +255,37 @@ static void resemble_detection(struct segment *s)
         }
       }
     }
-    if (!CHECK_CHUNK(c, CHUNK_DUPLICATE))
+    if (!CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS))
     {
+      GQueue *tq = g_hash_table_lookup(fp_to_superfps, &c->fp);
+      if (tq == NULL)
+      {
+        tq = g_queue_new();
+      }
       for (int i = 0; i < SUPER_FINGERPRINT_SIZE; i++)
       {
-        GQueue *tq = g_hash_table_lookup(fp_to_superfps, &c->fp);
-        if (tq == NULL)
-        {
-          tq = g_queue_new();
-          g_hash_table_insert(fp_to_superfps, &c->fp, tq);
-        }
+
         fingerprint *t = (fingerprint *)malloc(sizeof(fingerprint));
-        memcpy(t, &subchunks->super_features[i], sizeof(fingerprint));
+        memcpy(*t, subchunks->super_features[i], sizeof(fingerprint));
         g_queue_push_tail(tq, t);
       }
-    }
+      g_hash_table_replace(fp_to_superfps, &c->fp, tq);
 
+      struct indexElem **nes = (struct indexElem **)malloc(sizeof(struct indexElem *));
+      for (int i = 0; i < SUPER_FINGERPRINT_SIZE; i++)
+      {
+        nes[i] = (struct indexElem *)malloc(sizeof(struct indexElem));
+        nes[i]->id = c->id;
+        memcpy(&nes[i]->fp, &c->fp, sizeof(fingerprint));
+        g_queue_push_tail(tqs[i], nes[i]);
+        g_hash_table_replace(index_buffer_post_compress.buffered_fingerprints, &subchunks->super_features[i], tqs[i]);
+        index_buffer_post_compress.chunk_num++;
+      }
+
+      free(nes);
+    }
+    // for debug
     /* Insert it into the index buffer  */
-    struct indexElem **nes = (struct indexElem **)malloc(sizeof(struct indexElem *));
-    for (int i = 0; i < SUPER_FINGERPRINT_SIZE; i++)
-    {
-      nes[i] = (struct indexElem *)malloc(sizeof(struct indexElem));
-      nes[i]->id = c->id;
-      memcpy(&nes[i]->fp, &c->fp, sizeof(fingerprint));
-      g_queue_push_tail(tqs[i], nes[i]);
-      g_hash_table_replace(index_buffer_post_compress.buffered_fingerprints, &subchunks->super_features[i], tqs[i]);
-      index_buffer_post_compress.chunk_num++;
-    }
-
-    free(nes);
     free(tqs);
   }
 }
@@ -300,18 +301,21 @@ void index_update_post_compress(GSequence *chunks, int64_t id)
     {
       continue;
     }
-    GQueue* tq = g_hash_table_lookup(fp_to_superfps, c->fp);
+    GQueue *tq = g_hash_table_lookup(fp_to_superfps, c->fp);
+    if (!tq)
+    {
+      continue;
+    }
     fingerprint *t;
 
-    assert(tq != NULL);
-
-    while(!g_queue_is_empty(tq))
+    while (!g_queue_is_empty(tq))
     {
       t = g_queue_pop_head(tq);
-      kvstore_update_post_compress((char *)t, id, c->fp);
-      GQueue* index_buffer_tq = g_hash_table_lookup(index_buffer_post_compress.buffered_fingerprints, t);
-      while(!g_queue_is_empty(index_buffer_tq)){
-        struct indexElem * em = g_queue_pop_head(index_buffer_tq);
+      kvstore_update_post_compress(*t, id, c->fp);
+      GQueue *index_buffer_tq = g_hash_table_lookup(index_buffer_post_compress.buffered_fingerprints, t);
+      while (!g_queue_is_empty(index_buffer_tq))
+      {
+        struct indexElem *em = g_queue_pop_head(index_buffer_tq);
         free(em);
       }
       g_queue_free(index_buffer_tq);
@@ -599,4 +603,41 @@ int index_update_buffer(struct segment *s)
     return 0;
   }
   return 1;
+}
+
+int index_update_buffer_post_compress(struct segment *s)
+{
+  GSequenceIter *iter = g_sequence_get_begin_iter(s->chunks);
+  GSequenceIter *end = g_sequence_get_end_iter(s->chunks);
+  for (; iter != end; iter = g_sequence_iter_next(iter))
+  {
+    struct chunk *c = g_sequence_get(iter);
+
+    if (CHECK_CHUNK(c, CHUNK_FILE_START) || CHECK_CHUNK(c, CHUNK_FILE_END))
+      continue;
+
+    assert(c->id != TEMPORARY_ID);
+    GQueue *tq = g_hash_table_lookup(index_buffer_post_compress.buffered_fingerprints, &c->fp);
+    assert(tq != NULL);
+
+    struct indexElem *e = g_queue_pop_head(tq);
+    if (g_queue_get_length(tq) == 0)
+    {
+      g_hash_table_remove(index_buffer.buffered_fingerprints, &c->fp);
+      g_queue_free(tq);
+    }
+    else
+    {
+      int num = g_queue_get_length(tq), j;
+      for (j = 0; j < num; j++)
+      {
+        struct indexElem *ie = g_queue_peek_nth(tq, j);
+        ie->id = c->id;
+      }
+    }
+    free(e);
+    index_buffer.chunk_num--;
+  }
+
+  return 0;
 }

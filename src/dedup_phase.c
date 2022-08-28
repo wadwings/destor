@@ -75,12 +75,12 @@ void send_segment(struct segment *s)
 
 void *dedup_thread(void *arg)
 {    
-  struct segment *tmp;
+  struct segment **tmp = (struct segment **) malloc(sizeof(struct segment *));
   struct segment *s = NULL;
   while (1)
   {
     struct chunk *c = NULL;
-    if (destor.simulation_level != SIMULATION_ALL)
+    if (destor.simulation_level != SIMULATION_ALL) 
       c = sync_queue_pop(hash_queue);
     else
       c = sync_queue_pop(trace_queue);

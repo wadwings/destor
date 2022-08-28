@@ -85,6 +85,7 @@ extern struct
 
 void *post_compress_thread(void *arg)
 {
+  struct segment **tmp = (struct segment **) malloc(sizeof(struct segment *));
   struct segment *s = NULL;
   while (1)
   {
@@ -92,7 +93,6 @@ void *post_compress_thread(void *arg)
     c = sync_queue_pop(dedup_queue);
     
     /* Add the chunk to the segment. */
-    struct segment *tmp;
     s = segmenting(c, tmp);
     if (!s)
       continue;
