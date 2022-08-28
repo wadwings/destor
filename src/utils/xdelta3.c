@@ -244,7 +244,7 @@ int xdelta3_decode(char *src, char *in, int srclen, int inlen, char *out){
 
   if (r == -1)
   {
-    fprintf(stderr, "Encode error: %d\n", r);
+    fprintf(stderr, "Decode error: %d\n", r);
     return r;
   }else{
     outlen = r;

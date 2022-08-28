@@ -5,6 +5,8 @@
 #include "utils/lru_cache.h"
 #include "restore.h"
 
+GHashTable * fp_chunk_map;
+
 static void* lru_restore_thread(void *arg) {
 	struct lruCache *cache;
 	if (destor.simulation_level >= SIMULATION_RESTORE)
@@ -44,6 +46,10 @@ static void* lru_restore_thread(void *arg) {
 				lru_cache_insert(cache, con, NULL, NULL);
 				jcr.read_container_num++;
 			}
+      struct chunk *rc;
+      if(CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS)){
+
+      }
 			struct chunk *rc = get_chunk_in_container(con, &c->fp);
 			assert(rc);
 			TIMER_END(1, jcr.read_chunk_time);
@@ -65,6 +71,7 @@ static void* lru_restore_thread(void *arg) {
 static void* read_recipe_thread(void *arg) {
 
 	int i, j, k;
+  int delta_compress_flag = 0;
 	for (i = 0; i < jcr.bv->number_of_files; i++) {
 		TIMER_DECLARE(1);
 		TIMER_BEGIN(1);
@@ -84,11 +91,18 @@ static void* read_recipe_thread(void *arg) {
 			TIMER_BEGIN(1);
 
 			struct chunkPointer* cp = read_next_n_chunk_pointers(jcr.bv, 1, &k);
-
+      if(cp->size == -1){
+        delta_compress_flag = 1;
+        j--;
+        continue;
+      }
 			struct chunk* c = new_chunk(0);
 			memcpy(&c->fp, &cp->fp, sizeof(fingerprint));
 			c->size = cp->size;
 			c->id = cp->id;
+      if(delta_compress_flag){
+        SET_CHUNK(c, CHUNK_DELTA_COMPRESS);
+      }
 
 			TIMER_END(1, jcr.read_recipe_time);
 

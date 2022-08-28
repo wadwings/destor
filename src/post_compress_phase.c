@@ -73,7 +73,6 @@ void send_segment_post_compress(struct segment *s)
 
   s->chunk_num = 0;
 }
-
 extern struct
 {
   /* accessed in dedup phase */

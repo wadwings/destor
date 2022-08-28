@@ -315,6 +315,8 @@ struct subchunks{
 
 typedef struct subchunks subchunks;
 
+extern struct containerMeta * cms;
+
 struct chunk* new_chunk(int32_t);
 void free_chunk(struct chunk*);
 

@@ -134,6 +134,7 @@ void init_index()
   init_fingerprint_cache();
 
   init_fp_to_superfps();
+  init_fp_to_post_fp();
   index_overhead.lookup_requests = 0;
   index_overhead.update_requests = 0;
   index_overhead.lookup_requests_for_unique = 0;
@@ -198,7 +199,8 @@ static void resemble_detection(struct segment *s)
       {
         struct indexElem *be = g_queue_peek_head(tqs[i]);
         c->id = be->id;
-        memcpy(c->fp, be->fp, sizeof(fingerprint));
+        // memcpy(c->fp, be->fp, sizeof(fingerprint));
+        kvstore_update_fp_to_fp(c->fp, be->fp);
         SET_CHUNK(c, CHUNK_DELTA_COMPRESS);
         break;
       }
@@ -243,7 +245,8 @@ static void resemble_detection(struct segment *s)
           //   NOTICE("Filter phase: A key collision occurs");
           // }
           c->id = entries[0].id;
-          memcpy(c->fp, entries[0].fp, sizeof(fingerprint));
+          // memcpy(c->fp, entries[0].fp, sizeof(fingerprint));
+          kvstore_update_fp_to_fp(c->fp, entries[0].fp);
           SET_CHUNK(c, CHUNK_DELTA_COMPRESS);
         }
         else

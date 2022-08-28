@@ -48,4 +48,6 @@ extern subchunks *index_sampling_super_features(struct chunk *c);
 extern subchunks *index_sampling_finesse(struct chunk *c);
 unsigned int rabin_function(unsigned char *data, unsigned int size, int index);
 int index_lookup_resemble(struct segment *s);
+void index_update_post_compress(GSequence *chunks, int64_t id);
+
 #endif

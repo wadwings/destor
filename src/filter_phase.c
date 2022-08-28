@@ -5,6 +5,8 @@
 #include "rewrite_phase.h"
 #include "backup.h"
 #include "index/index.h"
+#include "utils/xdelta3.h"
+#include "kvstore.h"
 
 static pthread_t filter_t;
 static int64_t chunk_num;
@@ -17,6 +19,8 @@ struct
    * we keep a list for chunks in container buffer. */
   GSequence *chunks;
 } storage_buffer;
+
+struct containerMeta * cms;
 
 extern struct
 {
@@ -33,7 +37,7 @@ static void *filter_thread(void *arg)
 {
   int enable_rewrite = 1;
   struct fileRecipeMeta *r = NULL;
-
+  cms = (struct containerMeta *)malloc(sizeof(struct containerMeta));
   while (1)
   {
     struct chunk *c = sync_queue_pop(rewrite_queue);
@@ -122,7 +126,29 @@ static void *filter_thread(void *arg)
         struct chunk *ruc = g_hash_table_lookup(recently_unique_chunks, &c->fp);
         assert(ruc);
         c->id = ruc->id;
+        // use xdelta to compute the delta information from unique chunk
       }
+      if(CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS)){
+        fingerprint fp = kvstore_lookup_fp_to_fp(c->fp);
+        struct chunk *ruc = g_hash_table_lookup(recently_unique_chunks, fp);
+        if(ruc){
+          char *t = (char *)malloc(c->size);
+          c->size = xdelta3_encode(ruc->data, c->data, ruc->size, c->size, t);
+          free(c->data);
+          c->data = t;
+        }else if(storage_buffer.container_buffer && c->id == get_container_id(storage_buffer.container_buffer)){
+          ruc = lookup_fingerprint_in_container(storage_buffer.container_buffer, c->fp);
+          char *t = (char *)malloc(c->size);
+          c->size = xdelta3_encode(ruc->data, c->data, ruc->size, c->size, t);
+          free(c->data);
+          c->data = t;
+        }else{
+          UNSET_CHUNK(c, CHUNK_DELTA_COMPRESS);
+          c->id = get_container_id(storage_buffer.container_buffer);
+          kvstore_delete_fp_to_fp(c->fp);
+        }
+      }
+
       struct chunk *rwc = g_hash_table_lookup(recently_rewritten_chunks, &c->fp);
       if (rwc)
       {
@@ -144,7 +170,7 @@ static void *filter_thread(void *arg)
           if (destor.index_category[1] == INDEX_CATEGORY_PHYSICAL_LOCALITY)
             storage_buffer.chunks = g_sequence_new(free_chunk);
         }
-
+        
         if (container_overflow(storage_buffer.container_buffer, c->size))
         {
 
@@ -155,7 +181,7 @@ static void *filter_thread(void *arg)
              * Update_index for physical locality
              */
             GHashTable *features = sampling(storage_buffer.chunks,
-                                            g_sequence_get_length(storage_buffer.chunks)); // some fingerprints of chunks in the container?
+                                            g_sequence_get_length(storage_buffer.chunks)); // part of the fingerprints of chunks in the container?
             index_update_post_compress(storage_buffer.chunks, get_container_id(storage_buffer.container_buffer));
             index_update(features, get_container_id(storage_buffer.container_buffer));
             g_hash_table_destroy(features);
@@ -250,6 +276,22 @@ static void *filter_thread(void *arg)
       {
         assert(CHECK_CHUNK(c, CHUNK_FILE_START));
         r = new_file_recipe_meta(c->data);
+      }else if(CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS)){
+        struct chunkPointer t_cp;
+        t_cp.id = c->id;
+        memcpy(&t_cp.fp, &c->fp, sizeof(fingerprint));
+        t_cp.size = -1;
+        append_n_chunk_pointers(jcr.bv, &t_cp, 1);
+        struct chunkPointer cp;
+        cp.id = c->id;
+        assert(cp.id >= 0);
+        memcpy(&cp.fp, &c->fp, sizeof(fingerprint));
+        cp.size = c->size;
+        append_n_chunk_pointers(jcr.bv, &cp, 1);
+        r->chunknum++;
+        r->filesize += c->size;
+        jcr.chunk_num++;
+        jcr.data_size += c->size;
       }
       else if (!CHECK_CHUNK(c, CHUNK_FILE_END))
       {
@@ -261,7 +303,6 @@ static void *filter_thread(void *arg)
         append_n_chunk_pointers(jcr.bv, &cp, 1);
         r->chunknum++;
         r->filesize += c->size;
-
         jcr.chunk_num++;
         jcr.data_size += c->size;
       }

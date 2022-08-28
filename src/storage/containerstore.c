@@ -172,6 +172,7 @@ void write_container(struct container* c) {
 			perror("Fail seek in container store.");
 			exit(1);
 		}
+    
 		if(fwrite(c->data, CONTAINER_SIZE, 1, fp) != 1){
 			perror("Fail to write a container in container store.");
 			exit(1);
@@ -371,14 +372,29 @@ struct chunk* get_chunk_in_container(struct container* c, fingerprint *fp) {
 	assert(me);
 
 	struct chunk* ck = new_chunk(me->len);
-
 	if (destor.simulation_level < SIMULATION_RESTORE)
 		memcpy(ck->data, c->data + me->off, me->len);
 
 	ck->size = me->len;
 	ck->id = c->meta.id;
 	memcpy(&ck->fp, &fp, sizeof(fingerprint));
+  
+	return ck;
+}
 
+struct chunk* get_chunk_in_container_post_compress(struct container* c, fingerprint *fp){
+  struct metaEntry* me = get_metaentry_in_container_meta(&c->meta, fp);
+
+	assert(me);
+  // wings-TODO
+	struct chunk* ck = new_chunk(me->len);
+	if (destor.simulation_level < SIMULATION_RESTORE)
+		memcpy(ck->data, c->data + me->off, me->len);
+
+	ck->size = me->len;
+	ck->id = c->meta.id;
+	memcpy(&ck->fp, &fp, sizeof(fingerprint));
+  
 	return ck;
 }
 
@@ -435,6 +451,8 @@ void free_container_meta(struct containerMeta* cm) {
 
 void free_container(struct container* c) {
 	g_hash_table_destroy(c->meta.map);
+  // cms = realloc(cms, sizeof(struct containerMeta)*(c->meta.id+1));
+  // cms[c->meta.id] = c->meta;
 	if (c->data)
 		free(c->data);
 	free(c);
