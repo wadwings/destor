@@ -20,7 +20,7 @@ struct
   GSequence *chunks;
 } storage_buffer;
 
-struct containerMeta * cms;
+struct containerMeta *cms;
 
 extern struct
 {
@@ -128,36 +128,48 @@ static void *filter_thread(void *arg)
         c->id = ruc->id;
         // use xdelta to compute the delta information from unique chunk
       }
-      if(CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS)){
-        char *fp = kvstore_lookup_fp_to_fp(c->fp);
+      if (CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS))
+      {
+        jcr.data_size += c->size;
+        int c_size_t = c->size;
+        fingerprint fp;
+        memcpy(fp, kvstore_lookup_fp_to_fp(c->fp), sizeof(fingerprint));
         struct chunk *ruc = g_hash_table_lookup(recently_unique_chunks, &fp);
-        if(ruc){
-          jcr.post_compress_chunk_num++;
-          int c_size_t = c->size;
-          jcr.data_size += c_size_t;
+        if (ruc)
+        {
           char *t = (char *)malloc(c->size);
           c->size = xdelta3_encode(ruc->data, c->data, ruc->size, c->size, t);
-          jcr.post_compress_chunk_size += c_size_t - c->size;
           c->id = ruc->id;
-          free(c->data);
-          c->data = t;            
+					memcpy(c->data, t, c->size);
+					free(t);
           jcr.post_compress_chunk_num++;
           jcr.post_compress_chunk_size += c->size;
-        }else if(storage_buffer.container_buffer && c->id == get_container_id(storage_buffer.container_buffer)){
-          jcr.post_compress_chunk_num++;
-          int c_size_t = c->size;
-          jcr.data_size += c_size_t;
-          ruc = lookup_fingerprint_in_container(storage_buffer.container_buffer, c->fp);
+        }
+        else if (storage_buffer.container_buffer && c->id == get_container_id(storage_buffer.container_buffer))
+        {
+          ruc = get_chunk_in_container(storage_buffer.container_buffer, &fp);
           char *t = (char *)malloc(c->size);
           c->size = xdelta3_encode(ruc->data, c->data, ruc->size, c->size, t);
-          jcr.post_compress_chunk_size += c_size_t - c->size;
-          free(c->data);
-          c->data = t;
-        }else{
-          UNSET_CHUNK(c, CHUNK_DELTA_COMPRESS);
-          c->id = get_container_id(storage_buffer.container_buffer);
-          kvstore_delete_fp_to_fp(c->fp);
+					memcpy(c->data, t, c->size);
+					free(t);
+          jcr.post_compress_chunk_num++;
+          jcr.post_compress_chunk_size += c->size;
         }
+        else if (c->id != TEMPORARY_ID)
+        {
+          struct container *con = retrieve_container_by_id(c->id);
+          ruc = get_chunk_in_container(con, &fp);
+          char *t = (char *)malloc(c->size);
+          c->size = xdelta3_encode(ruc->data, c->data, ruc->size, c->size, t);
+					memcpy(c->data, t, c->size);
+          free(t);
+          jcr.post_compress_chunk_num++;
+          jcr.post_compress_chunk_size += c->size;
+        }else{
+					UNSET_CHUNK(c, CHUNK_DELTA_COMPRESS);
+					jcr.data_size -= c->size;
+					kvstore_delete_fp_to_fp(c->fp);
+				}
       }
 
       struct chunk *rwc = g_hash_table_lookup(recently_rewritten_chunks, &c->fp);
@@ -181,7 +193,7 @@ static void *filter_thread(void *arg)
           if (destor.index_category[1] == INDEX_CATEGORY_PHYSICAL_LOCALITY)
             storage_buffer.chunks = g_sequence_new(free_chunk);
         }
-        
+
         if (container_overflow(storage_buffer.container_buffer, c->size))
         {
 
@@ -219,7 +231,7 @@ static void *filter_thread(void *arg)
             VERBOSE("Filter phase: %dth chunk is recently unique, size %d", chunk_num,
                     g_hash_table_size(recently_unique_chunks));
           }
-          else if(CHECK_CHUNK(c, CHUNK_DUPLICATE))
+          else if (CHECK_CHUNK(c, CHUNK_DUPLICATE))
           {
             jcr.rewritten_chunk_num++;
             jcr.rewritten_chunk_size += c->size;
@@ -267,7 +279,7 @@ static void *filter_thread(void *arg)
     }
 
     int full = index_update_buffer(s); // wings-TODO
-    //index_update_buffer_post_compress(s);
+    // index_update_buffer_post_compress(s);
 
     /* Write a SEGMENT_BEGIN */
     segmentid sid = append_segment_flag(jcr.bv, CHUNK_SEGMENT_START, s->chunk_num);
@@ -283,21 +295,6 @@ static void *filter_thread(void *arg)
       {
         assert(CHECK_CHUNK(c, CHUNK_FILE_START));
         r = new_file_recipe_meta(c->data);
-      }else if(CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS)){
-        struct chunkPointer t_cp;
-        t_cp.id = c->id;
-        memcpy(&t_cp.fp, &c->fp, sizeof(fingerprint));
-        t_cp.size = -1;
-        append_n_chunk_pointers(jcr.bv, &t_cp, 1);
-        struct chunkPointer cp;
-        cp.id = c->id;
-        assert(cp.id >= 0);
-        memcpy(&cp.fp, &c->fp, sizeof(fingerprint));
-        cp.size = c->size;
-        append_n_chunk_pointers(jcr.bv, &cp, 1);
-        r->chunknum++;
-        r->filesize += c->size;
-        jcr.chunk_num++;
       }
       else if (!CHECK_CHUNK(c, CHUNK_FILE_END))
       {
@@ -309,8 +306,10 @@ static void *filter_thread(void *arg)
         append_n_chunk_pointers(jcr.bv, &cp, 1);
         r->chunknum++;
         r->filesize += c->size;
+
         jcr.chunk_num++;
-        jcr.data_size += c->size;
+        if (!CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS))
+          jcr.data_size += c->size;
       }
       else
       {
@@ -318,7 +317,6 @@ static void *filter_thread(void *arg)
         append_file_recipe_meta(jcr.bv, r);
         free_file_recipe_meta(r);
         r = NULL;
-
         jcr.file_num++;
       }
     }

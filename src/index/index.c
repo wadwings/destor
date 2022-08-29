@@ -30,6 +30,11 @@ guint g_feature_hash(char *feature)
 extern void init_segmenting_method();
 extern void init_sampling_method();
 
+void init_fp_to_superfps()
+{
+	fp_to_superfps = g_hash_table_new_full(g_int64_hash, g_fingerprint_equal, NULL, NULL);
+}
+
 void init_index()
 {
   /* Do NOT assign a free function for value. */
@@ -149,10 +154,7 @@ void close_index()
   close_kvstore_post_compress();
 }
 
-void init_fp_to_superfps()
-{
-  fp_to_superfps = g_hash_table_new_full(g_int64_hash, g_fingerprint_equal, NULL, NULL);
-}
+
 
 extern struct
 {
@@ -189,6 +191,9 @@ static void resemble_detection(struct segment *s)
      * recently backup fingerprints.
      */
     GQueue **tqs = (GQueue **)malloc(sizeof(GQueue *) * SUPER_FINGERPRINT_SIZE);
+    for(int i = 0; i < SUPER_FINGERPRINT_SIZE; i++)
+      tqs[i] = NULL;
+    
     for (int i = 0; i < SUPER_FINGERPRINT_SIZE; i++)
     {
       tqs[i] = g_hash_table_lookup(index_buffer_post_compress.buffered_fingerprints, &subchunks->super_features[i]);
@@ -277,6 +282,9 @@ static void resemble_detection(struct segment *s)
     struct indexElem **nes = (struct indexElem **)malloc(sizeof(struct indexElem *));
     for (int i = 0; i < SUPER_FINGERPRINT_SIZE; i++)
     {
+      if(!tqs[i]){
+        continue;
+      }
       nes[i] = (struct indexElem *)malloc(sizeof(struct indexElem));
       nes[i]->id = c->id;
       memcpy(&nes[i]->fp, &c->fp, sizeof(fingerprint));

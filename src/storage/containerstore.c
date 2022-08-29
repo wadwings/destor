@@ -370,24 +370,11 @@ struct chunk* get_chunk_in_container(struct container* c, fingerprint *fp) {
 	struct metaEntry* me = get_metaentry_in_container_meta(&c->meta, fp);
 
 	assert(me);
-
+	if(me->len == 0){
+		printf("warning!");
+	}
 	struct chunk* ck = new_chunk(me->len);
-	if (destor.simulation_level < SIMULATION_RESTORE)
-		memcpy(ck->data, c->data + me->off, me->len);
 
-	ck->size = me->len;
-	ck->id = c->meta.id;
-	memcpy(&ck->fp, &fp, sizeof(fingerprint));
-  
-	return ck;
-}
-
-struct chunk* get_chunk_in_container_post_compress(struct container* c, fingerprint *fp){
-  struct metaEntry* me = get_metaentry_in_container_meta(&c->meta, fp);
-
-	assert(me);
-  // wings-TODO
-	struct chunk* ck = new_chunk(me->len);
 	if (destor.simulation_level < SIMULATION_RESTORE)
 		memcpy(ck->data, c->data + me->off, me->len);
 

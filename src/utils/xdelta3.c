@@ -25,8 +25,7 @@ int code(
     char *out)
 {
   int r, ret, in_read = 0, outbuflen = 0;
-  struct stat statbuf;
-  xd3_stream stream;
+	xd3_stream stream;
   xd3_config config;
   xd3_source source;
   void *Input_Buf;

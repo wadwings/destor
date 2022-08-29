@@ -35,6 +35,7 @@ void init_jcr(char *path) {
 	jcr.zero_chunk_size = 0;
 	jcr.rewritten_chunk_num = 0;
 	jcr.rewritten_chunk_size = 0;
+  jcr.post_compress_chunk_num = 0;
   
 	jcr.sparse_container_num = 0;
 	jcr.inherited_sparse_num = 0;

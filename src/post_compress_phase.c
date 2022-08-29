@@ -57,7 +57,7 @@ void send_segment_post_compress(struct segment *s)
         }
       }
       else if(CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS)){
-        DEBUG("Post compress phase: %ldth chunk is delta compressed in container %lld", chunk_num++);
+        DEBUG("Post compress phase: %ldth chunk is delta compressed in container %lld", chunk_num++, c->id);
       }else{
         DEBUG("Post compress phase: %ldth chunk is unique", chunk_num++);
       }

@@ -206,7 +206,7 @@ void init_kvstore_htable_fp_to_fp(){
 			fread(get_key(kv), destor.index_key_size, 1, fp);
       fread(get_value_fp_to_fp(kv), sizeof(fingerprint), 1, fp);
 			/* The number of segments/containers the feature refers to. */
-			g_hash_table_insert(htable_post_compress, get_key(kv), kv);
+			g_hash_table_replace(htable_fp_to_fp, get_key(kv), kv);
 		}
 		fclose(fp);
 	}
@@ -324,7 +324,7 @@ void close_kvstore_htable_fp_to_fp() {
 
 	FILE *fp;
 	if ((fp = fopen(indexpath, "w")) == NULL) {
-		perror("Can not open index/htable_post_compress for write because:");
+		perror("Can not open index/htable_fp_to_fp for write because:");
 		exit(1);
 	}
 
@@ -379,7 +379,11 @@ post_compress_entry* kvstore_htable_lookup_post_compress(char* key) {
 
 char* kvstore_htable_lookup_fp_to_fp(char* key) {
 	kvpair kv = g_hash_table_lookup(htable_fp_to_fp, key);
-	return kv ? get_value_fp_to_fp(kv) : NULL;
+	if (kv){
+		return get_value_fp_to_fp(kv);
+	}else{
+		return NULL;
+	}
 }
 
 void kvstore_htable_update(char* key, int64_t id) {
