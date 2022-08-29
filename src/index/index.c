@@ -272,20 +272,20 @@ static void resemble_detection(struct segment *s)
         g_queue_push_tail(tq, t);
       }
       g_hash_table_replace(fp_to_superfps, &c->fp, tq);
-
-      struct indexElem **nes = (struct indexElem **)malloc(sizeof(struct indexElem *));
-      for (int i = 0; i < SUPER_FINGERPRINT_SIZE; i++)
-      {
-        nes[i] = (struct indexElem *)malloc(sizeof(struct indexElem));
-        nes[i]->id = c->id;
-        memcpy(&nes[i]->fp, &c->fp, sizeof(fingerprint));
-        g_queue_push_tail(tqs[i], nes[i]);
-        g_hash_table_replace(index_buffer_post_compress.buffered_fingerprints, &subchunks->super_features[i], tqs[i]);
-        index_buffer_post_compress.chunk_num++;
-      }
-
-      free(nes);
     }
+
+    struct indexElem **nes = (struct indexElem **)malloc(sizeof(struct indexElem *));
+    for (int i = 0; i < SUPER_FINGERPRINT_SIZE; i++)
+    {
+      nes[i] = (struct indexElem *)malloc(sizeof(struct indexElem));
+      nes[i]->id = c->id;
+      memcpy(&nes[i]->fp, &c->fp, sizeof(fingerprint));
+      g_queue_push_tail(tqs[i], nes[i]);
+      g_hash_table_replace(index_buffer_post_compress.buffered_fingerprints, &subchunks->super_features[i], tqs[i]);
+      index_buffer_post_compress.chunk_num++;
+    }
+
+    free(nes);
     // for debug
     /* Insert it into the index buffer  */
     free(tqs);
