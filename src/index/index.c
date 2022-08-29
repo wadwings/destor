@@ -145,6 +145,8 @@ void init_index()
 void close_index()
 {
   close_kvstore();
+  close_kvstore_fp_to_fp();
+  close_kvstore_post_compress();
 }
 
 void init_fp_to_superfps()
@@ -492,7 +494,7 @@ int index_lookup_resemble(struct segment *s)
   TIMER_DECLARE(1);
   TIMER_BEGIN(1);
   resemble_detection(s);
-  TIMER_END(1, jcr.dedup_time);
+  TIMER_END(1, jcr.post_compress_time);
 
   return 1;
 }

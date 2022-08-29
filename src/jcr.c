@@ -35,7 +35,7 @@ void init_jcr(char *path) {
 	jcr.zero_chunk_size = 0;
 	jcr.rewritten_chunk_num = 0;
 	jcr.rewritten_chunk_size = 0;
-
+  
 	jcr.sparse_container_num = 0;
 	jcr.inherited_sparse_num = 0;
 	jcr.total_container_num = 0;
@@ -48,6 +48,7 @@ void init_jcr(char *path) {
 	jcr.chunk_time = 0;
 	jcr.hash_time = 0;
 	jcr.dedup_time = 0;
+  jcr.post_compress_time = 0;
 	jcr.rewrite_time = 0;
 	jcr.filter_time = 0;
 	jcr.write_time = 0;

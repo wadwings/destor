@@ -121,7 +121,7 @@ static void *filter_thread(void *arg)
         }
       }
 
-      if ((CHECK_CHUNK(c, CHUNK_DUPLICATE) || CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS)) && c->id == TEMPORARY_ID)
+      if (CHECK_CHUNK(c, CHUNK_DUPLICATE) && c->id == -1)
       {
         struct chunk *ruc = g_hash_table_lookup(recently_unique_chunks, &c->fp);
         assert(ruc);
@@ -132,14 +132,25 @@ static void *filter_thread(void *arg)
         char *fp = kvstore_lookup_fp_to_fp(c->fp);
         struct chunk *ruc = g_hash_table_lookup(recently_unique_chunks, &fp);
         if(ruc){
+          jcr.post_compress_chunk_num++;
+          int c_size_t = c->size;
+          jcr.data_size += c_size_t;
           char *t = (char *)malloc(c->size);
           c->size = xdelta3_encode(ruc->data, c->data, ruc->size, c->size, t);
+          jcr.post_compress_chunk_size += c_size_t - c->size;
+          c->id = ruc->id;
           free(c->data);
-          c->data = t;
+          c->data = t;            
+          jcr.post_compress_chunk_num++;
+          jcr.post_compress_chunk_size += c->size;
         }else if(storage_buffer.container_buffer && c->id == get_container_id(storage_buffer.container_buffer)){
+          jcr.post_compress_chunk_num++;
+          int c_size_t = c->size;
+          jcr.data_size += c_size_t;
           ruc = lookup_fingerprint_in_container(storage_buffer.container_buffer, c->fp);
           char *t = (char *)malloc(c->size);
           c->size = xdelta3_encode(ruc->data, c->data, ruc->size, c->size, t);
+          jcr.post_compress_chunk_size += c_size_t - c->size;
           free(c->data);
           c->data = t;
         }else{
@@ -208,12 +219,7 @@ static void *filter_thread(void *arg)
             VERBOSE("Filter phase: %dth chunk is recently unique, size %d", chunk_num,
                     g_hash_table_size(recently_unique_chunks));
           }
-          else if (CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS))
-          {
-            jcr.post_compress_chunk_num++;
-            jcr.post_compress_chunk_size += c->size;
-          }
-          else
+          else if(CHECK_CHUNK(c, CHUNK_DUPLICATE))
           {
             jcr.rewritten_chunk_num++;
             jcr.rewritten_chunk_size += c->size;
@@ -292,7 +298,6 @@ static void *filter_thread(void *arg)
         r->chunknum++;
         r->filesize += c->size;
         jcr.chunk_num++;
-        jcr.data_size += c->size;
       }
       else if (!CHECK_CHUNK(c, CHUNK_FILE_END))
       {

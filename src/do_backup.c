@@ -80,13 +80,14 @@ void do_backup(char *path) {
 	printf("number of chunks: %" PRId32 " (%" PRId64 " bytes on average)\n", jcr.chunk_num,
 			jcr.data_size / jcr.chunk_num);
 	printf("number of unique chunks: %" PRId32 "\n", jcr.unique_chunk_num);
+  printf("number of post compress chunks: %" PRId64 "\n", jcr.post_compress_chunk_num);
 	printf("total size(B): %" PRId64 "\n", jcr.data_size);
 	printf("stored data size(B): %" PRId64 "\n",
 			jcr.unique_data_size + jcr.rewritten_chunk_size);
 	printf("deduplication ratio: %.4f, %.4f\n",
 			jcr.data_size != 0 ?
 					(jcr.data_size - jcr.unique_data_size
-							- jcr.rewritten_chunk_size)
+							- jcr.rewritten_chunk_size - jcr.post_compress_chunk_size)
 							/ (double) (jcr.data_size) :
 					0,
 			jcr.data_size
@@ -121,6 +122,10 @@ void do_backup(char *path) {
 	printf("dedup_time : %.3fs, %.2fMB/s\n",
 			jcr.dedup_time / 1000000,
 			jcr.data_size * 1000000 / jcr.dedup_time / 1024 / 1024);
+
+  printf("post_compress_time : %.3fs, %.2fMB/s\n",
+      jcr.post_compress_time / 1000000,
+      jcr.data_size * 1000000 / jcr.post_compress_time / 1024 / 1024);
 
 	printf("rewrite_time : %.3fs, %.2fMB/s\n", jcr.rewrite_time / 1000000,
 			jcr.data_size * 1000000 / jcr.rewrite_time / 1024 / 1024);
@@ -173,7 +178,7 @@ void do_backup(char *path) {
 			jcr.data_size,
 			destor.stored_data_size,
 			jcr.data_size != 0 ?
-					(jcr.data_size - jcr.rewritten_chunk_size - jcr.unique_data_size)/(double) (jcr.data_size)
+					(jcr.data_size - jcr.rewritten_chunk_size - jcr.unique_data_size - jcr.post_compress_chunk_size)/(double) (jcr.data_size)
 					: 0,
 			jcr.data_size != 0 ? (double) (jcr.rewritten_chunk_size) / (double) (jcr.data_size) : 0,
 			jcr.total_container_num,

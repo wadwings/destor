@@ -50,6 +50,7 @@ struct jcr{
 	double chunk_time;
 	double hash_time;
 	double dedup_time;
+  double post_compress_time;
 	double rewrite_time;
 	double filter_time;
 	double write_time;
