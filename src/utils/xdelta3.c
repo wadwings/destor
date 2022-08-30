@@ -86,14 +86,14 @@ int code(
       {
         case XD3_INPUT:
         {
-          fprintf(stderr, "XD3_INPUT\n");
+//          fprintf(stderr, "XD3_INPUT\n");
           while_n_break = 0;
           break;
         }
 
         case XD3_OUTPUT:
         {
-          fprintf(stderr, "XD3_OUTPUT\n");
+//          fprintf(stderr, "XD3_OUTPUT\n");
 
           memcpy(out + outbuflen, stream.next_out, stream.avail_out);
           outbuflen += stream.avail_out;
@@ -108,7 +108,7 @@ int code(
 
         case XD3_GETSRCBLK:
         {
-          fprintf(stderr, "XD3_GETSRCBLK %qd\n", source.getblkno);
+//          fprintf(stderr, "XD3_GETSRCBLK %qd\n", source.getblkno);
           if (src_len)
           {
             int src_buffer_size = MIN(src_len, source.blksize);
@@ -126,19 +126,19 @@ int code(
 
         case XD3_GOTHEADER:
         {
-          fprintf(stderr, "XD3_GOTHEADER\n");
+//          fprintf(stderr, "XD3_GOTHEADER\n");
           break;
         }
 
         case XD3_WINSTART:
         {
-          fprintf(stderr, "XD3_WINSTART\n");
+//          fprintf(stderr, "XD3_WINSTART\n");
           break;
         }
 
         case XD3_WINFINISH:
         {
-          fprintf(stderr, "XD3_WINFINISH\n");
+//          fprintf(stderr, "XD3_WINFINISH\n");
           break;
         }
 

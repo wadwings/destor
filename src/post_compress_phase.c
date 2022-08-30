@@ -119,12 +119,14 @@ void *post_compress_thread(void *arg)
     send_segment_post_compress(s);
 
     free_segment(s);
+
     s = NULL;
 
     if (c == NULL)
       break;
   }
 
+	free(tmp);
   sync_queue_term(post_compress_queue);
 
   return NULL;

@@ -296,6 +296,7 @@ subchunks *index_sampling_super_features(struct chunk *c)
     MD5_Update(&ctx, features_char, FEATURES_PER_SFS * sizeof(int));
     MD5_Final(res->super_features[i], &ctx);
   }
+	free(features_char);
   return res;
 }
 

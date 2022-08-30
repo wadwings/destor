@@ -20,7 +20,7 @@ struct
   GSequence *chunks;
 } storage_buffer;
 
-struct containerMeta *cms;
+struct containerMeta ** cms;
 
 extern struct
 {
@@ -37,7 +37,7 @@ static void *filter_thread(void *arg)
 {
   int enable_rewrite = 1;
   struct fileRecipeMeta *r = NULL;
-  cms = (struct containerMeta *)malloc(sizeof(struct containerMeta));
+  cms = (struct containerMeta **)malloc(sizeof(struct containerMeta *));
   while (1)
   {
     struct chunk *c = sync_queue_pop(rewrite_queue);
@@ -157,15 +157,18 @@ static void *filter_thread(void *arg)
         }
         else if (c->id != TEMPORARY_ID)
         {
-          struct container *con = retrieve_container_by_id(c->id);
-          ruc = get_chunk_in_container(con, &fp);
-          char *t = (char *)malloc(c->size);
-          c->size = xdelta3_encode(ruc->data, c->data, ruc->size, c->size, t);
-					memcpy(c->data, t, c->size);
-          free(t);
-          jcr.post_compress_chunk_num++;
-          jcr.post_compress_chunk_size += c->size;
-        }else{
+					struct container *con = retrieve_container_by_id(c->id);
+					if(con->meta.id) {
+						ruc = get_chunk_in_container(con, &fp);
+						char *t = (char *) malloc(c->size);
+						c->size = xdelta3_encode(ruc->data, c->data, ruc->size, c->size, t);
+						memcpy(c->data, t, c->size);
+						free(t);
+						jcr.post_compress_chunk_num++;
+						jcr.post_compress_chunk_size += c->size;
+					}
+					free_container(con);
+				}else{
 					UNSET_CHUNK(c, CHUNK_DELTA_COMPRESS);
 					jcr.data_size -= c->size;
 					kvstore_delete_fp_to_fp(c->fp);
@@ -205,7 +208,8 @@ static void *filter_thread(void *arg)
              */
             GHashTable *features = sampling(storage_buffer.chunks,
                                             g_sequence_get_length(storage_buffer.chunks)); // part of the fingerprints of chunks in the container?
-            index_update_post_compress(storage_buffer.chunks, get_container_id(storage_buffer.container_buffer));
+//            index_update_post_compress(storage_buffer.chunks, get_container_id(storage_buffer.container_buffer));
+            index_update_post_compress(features, get_container_id(storage_buffer.container_buffer));
             index_update(features, get_container_id(storage_buffer.container_buffer));
             g_hash_table_destroy(features);
             g_sequence_free(storage_buffer.chunks);
@@ -279,7 +283,7 @@ static void *filter_thread(void *arg)
     }
 
     int full = index_update_buffer(s); // wings-TODO
-    // index_update_buffer_post_compress(s);
+		index_update_buffer_post_compress(s);
 
     /* Write a SEGMENT_BEGIN */
     segmentid sid = append_segment_flag(jcr.bv, CHUNK_SEGMENT_START, s->chunk_num);
@@ -397,7 +401,7 @@ static void *filter_thread(void *arg)
        */
       GHashTable *features = sampling(storage_buffer.chunks,
                                       g_sequence_get_length(storage_buffer.chunks));
-      index_update_post_compress(storage_buffer.chunks, get_container_id(storage_buffer.container_buffer));
+      index_update_post_compress(features, get_container_id(storage_buffer.container_buffer));
       index_update(features, get_container_id(storage_buffer.container_buffer));
       g_hash_table_destroy(features);
       g_sequence_free(storage_buffer.chunks);

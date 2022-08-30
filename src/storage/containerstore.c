@@ -15,8 +15,7 @@ static SyncQueue* container_buffer;
 struct metaEntry {
 	int32_t off;
 	int32_t len;
-	int32_t delta_compress_enable; 
-  fingerprint fp;
+	fingerprint fp;
 };
 
 /*
@@ -65,7 +64,7 @@ void init_container_store() {
 
 	pthread_create(&append_t, NULL, append_thread, NULL);
 
-    NOTICE("Init container store successfully");
+	NOTICE("Init container store successfully");
 }
 
 void close_container_store() {
@@ -88,7 +87,7 @@ static void init_container_meta(struct containerMeta *meta) {
 	meta->data_size = 0;
 	meta->id = TEMPORARY_ID;
 	meta->map = g_hash_table_new_full(g_int_hash, g_fingerprint_equal, NULL,
-			free);
+																		free);
 }
 
 /*
@@ -118,7 +117,7 @@ void write_container_async(struct container* c) {
 		 * It possibly occurs in the end of backup */
 		container_count--;
 		VERBOSE("Append phase: Deny writing an empty container %lld",
-				c->meta.id);
+						c->meta.id);
 		return;
 	}
 
@@ -137,12 +136,12 @@ void write_container(struct container* c) {
 		 * It possibly occurs in the end of backup */
 		container_count--;
 		VERBOSE("Append phase: Deny writing an empty container %lld",
-				c->meta.id);
+						c->meta.id);
 		return;
 	}
 
 	VERBOSE("Append phase: Writing container %lld of %d chunks", c->meta.id,
-			c->meta.chunk_num);
+					c->meta.chunk_num);
 
 	if (destor.simulation_level < SIMULATION_APPEND) {
 
@@ -161,7 +160,6 @@ void write_container(struct container* c) {
 			ser_bytes(&me->fp, sizeof(fingerprint));
 			ser_bytes(&me->len, sizeof(int32_t));
 			ser_bytes(&me->off, sizeof(int32_t));
-      ser_bytes(&me->delta_compress_enable, sizeof(int32_t));
 		}
 
 		ser_end(cur, CONTAINER_META_SIZE);
@@ -172,7 +170,6 @@ void write_container(struct container* c) {
 			perror("Fail seek in container store.");
 			exit(1);
 		}
-    
 		if(fwrite(c->data, CONTAINER_SIZE, 1, fp) != 1){
 			perror("Fail to write a container in container store.");
 			exit(1);
@@ -197,7 +194,6 @@ void write_container(struct container* c) {
 			ser_bytes(&me->fp, sizeof(fingerprint));
 			ser_bytes(&me->len, sizeof(int32_t));
 			ser_bytes(&me->off, sizeof(int32_t));
-      ser_bytes(&me->delta_compress_enable, sizeof(int32_t));
 		}
 
 		ser_end(buf, CONTAINER_META_SIZE);
@@ -233,7 +229,7 @@ struct container* retrieve_container_by_id(containerid id) {
 			fseek(fp, id * CONTAINER_META_SIZE + 8, SEEK_SET);
 		else
 			fseek(fp, (id + 1) * CONTAINER_SIZE - CONTAINER_META_SIZE + 8,
-			SEEK_SET);
+						SEEK_SET);
 
 		fread(c->data, CONTAINER_META_SIZE, 1, fp);
 
@@ -272,7 +268,6 @@ struct container* retrieve_container_by_id(containerid id) {
 		unser_bytes(&me->fp, sizeof(fingerprint));
 		unser_bytes(&me->len, sizeof(int32_t));
 		unser_bytes(&me->off, sizeof(int32_t));
-    unser_bytes(&me->delta_compress_enable, sizeof(int32_t));
 		g_hash_table_insert(c->meta.map, &me->fp, me);
 	}
 
@@ -313,7 +308,7 @@ struct containerMeta* retrieve_container_meta_by_id(containerid id) {
 
 	/* First, we find it in the buffer */
 	cm = sync_queue_find(container_buffer, container_check_id, &id,
-			container_meta_duplicate);
+											 container_meta_duplicate);
 
 	if (cm)
 		return cm;
@@ -329,7 +324,7 @@ struct containerMeta* retrieve_container_meta_by_id(containerid id) {
 		fseek(fp, id * CONTAINER_META_SIZE + 8, SEEK_SET);
 	else
 		fseek(fp, (id + 1) * CONTAINER_SIZE - CONTAINER_META_SIZE + 8,
-		SEEK_SET);
+					SEEK_SET);
 
 	fread(buf, CONTAINER_META_SIZE, 1, fp);
 
@@ -354,7 +349,6 @@ struct containerMeta* retrieve_container_meta_by_id(containerid id) {
 		unser_bytes(&me->fp, sizeof(fingerprint));
 		unser_bytes(&me->len, sizeof(int32_t));
 		unser_bytes(&me->off, sizeof(int32_t));
-    unser_bytes(&me->delta_compress_enable, sizeof(int32_t));
 		g_hash_table_insert(cm->map, &me->fp, me);
 	}
 
@@ -370,9 +364,7 @@ struct chunk* get_chunk_in_container(struct container* c, fingerprint *fp) {
 	struct metaEntry* me = get_metaentry_in_container_meta(&c->meta, fp);
 
 	assert(me);
-	if(me->len == 0){
-		printf("warning!");
-	}
+
 	struct chunk* ck = new_chunk(me->len);
 
 	if (destor.simulation_level < SIMULATION_RESTORE)
@@ -381,7 +373,7 @@ struct chunk* get_chunk_in_container(struct container* c, fingerprint *fp) {
 	ck->size = me->len;
 	ck->id = c->meta.id;
 	memcpy(&ck->fp, &fp, sizeof(fingerprint));
-  
+
 	return ck;
 }
 
@@ -391,7 +383,7 @@ int container_overflow(struct container* c, int32_t size) {
 	/*
 	 * 28 is the size of metaEntry.
 	 */
-	if ((c->meta.chunk_num + 1) * sizeof(struct metaEntry) + 16 > CONTAINER_META_SIZE)
+	if ((c->meta.chunk_num + 1) * 28 + 16 > CONTAINER_META_SIZE)
 		return 1;
 	return 0;
 }
@@ -413,10 +405,6 @@ int add_chunk_to_container(struct container* c, struct chunk* ck) {
 	memcpy(&me->fp, &ck->fp, sizeof(fingerprint));
 	me->len = ck->size;
 	me->off = c->meta.data_size;
-  if(CHECK_CHUNK(ck, CHUNK_DELTA_COMPRESS))
-    me->delta_compress_enable = 1;
-  else
-    me->delta_compress_enable = 0;
 
 	g_hash_table_insert(c->meta.map, &me->fp, me);
 	c->meta.chunk_num++;
@@ -438,8 +426,6 @@ void free_container_meta(struct containerMeta* cm) {
 
 void free_container(struct container* c) {
 	g_hash_table_destroy(c->meta.map);
-  // cms = realloc(cms, sizeof(struct containerMeta)*(c->meta.id+1));
-  // cms[c->meta.id] = c->meta;
 	if (c->data)
 		free(c->data);
 	free(c);
@@ -453,7 +439,7 @@ int container_empty(struct container* c) {
  * Return 0 if doesn't exist.
  */
 int lookup_fingerprint_in_container_meta(struct containerMeta* cm,
-		fingerprint *fp) {
+																				 fingerprint *fp) {
 	return g_hash_table_lookup(cm->map, fp) == NULL ? 0 : 1;
 }
 
@@ -462,12 +448,12 @@ int lookup_fingerprint_in_container(struct container* c, fingerprint *fp) {
 }
 
 gint g_container_cmp_desc(struct container* c1, struct container* c2,
-		gpointer user_data) {
+													gpointer user_data) {
 	return g_container_meta_cmp_desc(&c1->meta, &c2->meta, user_data);
 }
 
 gint g_container_meta_cmp_desc(struct containerMeta* cm1,
-		struct containerMeta* cm2, gpointer user_data) {
+															 struct containerMeta* cm2, gpointer user_data) {
 	return cm2->id - cm1->id;
 }
 

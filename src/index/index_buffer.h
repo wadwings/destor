@@ -10,6 +10,11 @@ struct indexElem {
     fingerprint fp;
 };
 
+struct indexElemPostCompress {
+  containerid id;
+  fingerprint fp, sfp;
+};
+
 /* The buffer size > 2 * destor.rewrite_buffer_size */
 /* All fingerprints that have been looked up in the index
  * but not been updated. */

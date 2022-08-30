@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DIR=/workspaces/destor/data
+DIR=/root/repos/destor/data
 mkdir -p ${DIR}/recipes/
 mkdir -p ${DIR}/index/
 
@@ -9,3 +9,4 @@ rm -f ${DIR}/index/*
 rm -f ${DIR}/container.pool
 rm -f ${DIR}/destor.stat
 rm -f ${DIR}/manifest
+rm -f /root/repos/destor/restore/*

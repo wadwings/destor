@@ -6,3 +6,10 @@ Makefile
 .deps
 tags
 destor
+backup
+.vscode
+autom4te.cache
+data
+null.d
+restore.log
+.idea

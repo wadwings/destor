@@ -119,7 +119,7 @@ void *dedup_thread(void *arg)
   }
 
   sync_queue_term(dedup_queue);
-
+	free(tmp);
   return NULL;
 }
 
