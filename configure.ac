@@ -7,7 +7,7 @@ AM_INIT_AUTOMAKE([destor], [2.0])
 
 # Checks for programs.
 AC_PROG_CC
-CFLAGS="-g -O2 -Wall -DNDEBUG=0  -DSIZEOF_SIZE_T=8 -DSIZEOF_UNSIGNED_LONG_LONG=8"
+CFLAGS="-g -O2 -Wall -DNDEBUG=0  -DSIZEOF_SIZE_T=8 -DSIZEOF_UNSIGNED_LONG_LONG=8 "
 
 # Checks for libraries.
 AC_CHECK_LIB([pthread], [pthread_create])

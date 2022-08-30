@@ -413,6 +413,13 @@ void free_segment(struct segment* s) {
 }
 
 gboolean g_fingerprint_equal(fingerprint* fp1, fingerprint* fp2) {
+	if(fp1 == NULL) {
+		NOTICE("fp1 is nullptr!");
+		return 0;
+	}else if(fp2 == NULL) {
+		NOTICE("fp1 is nullptr!");
+		return 0;
+	}
 	return !memcmp(fp1, fp2, sizeof(fingerprint));
 }
 

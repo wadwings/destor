@@ -166,6 +166,7 @@ static void *filter_thread(void *arg)
 						free(t);
 						jcr.post_compress_chunk_num++;
 						jcr.post_compress_chunk_size += c->size;
+						free_chunk(ruc);
 					}
 					free_container(con);
 				}else{
@@ -209,7 +210,7 @@ static void *filter_thread(void *arg)
             GHashTable *features = sampling(storage_buffer.chunks,
                                             g_sequence_get_length(storage_buffer.chunks)); // part of the fingerprints of chunks in the container?
 //            index_update_post_compress(storage_buffer.chunks, get_container_id(storage_buffer.container_buffer));
-            index_update_post_compress(features, get_container_id(storage_buffer.container_buffer));
+            index_update_post_compress(storage_buffer.chunks, get_container_id(storage_buffer.container_buffer));
             index_update(features, get_container_id(storage_buffer.container_buffer));
             g_hash_table_destroy(features);
             g_sequence_free(storage_buffer.chunks);
@@ -283,7 +284,7 @@ static void *filter_thread(void *arg)
     }
 
     int full = index_update_buffer(s); // wings-TODO
-		index_update_buffer_post_compress(s);
+//		index_update_buffer_post_compress(s);
 
     /* Write a SEGMENT_BEGIN */
     segmentid sid = append_segment_flag(jcr.bv, CHUNK_SEGMENT_START, s->chunk_num);
@@ -401,7 +402,7 @@ static void *filter_thread(void *arg)
        */
       GHashTable *features = sampling(storage_buffer.chunks,
                                       g_sequence_get_length(storage_buffer.chunks));
-      index_update_post_compress(features, get_container_id(storage_buffer.container_buffer));
+      index_update_post_compress(storage_buffer.chunks, get_container_id(storage_buffer.container_buffer));
       index_update(features, get_container_id(storage_buffer.container_buffer));
       g_hash_table_destroy(features);
       g_sequence_free(storage_buffer.chunks);

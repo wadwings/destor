@@ -10,9 +10,11 @@ struct indexElem {
     fingerprint fp;
 };
 
-struct indexElemPostCompress {
+struct fp_id_elem {
   containerid id;
-  fingerprint fp, sfp;
+  fingerprint fp;
+	fingerprint sfp;
+	GQueue * ids;
 };
 
 /* The buffer size > 2 * destor.rewrite_buffer_size */

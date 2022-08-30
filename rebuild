@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DIR=/root/repos/destor/data
+DIR=/root/repos/destor_v1/data
 mkdir -p ${DIR}/recipes/
 mkdir -p ${DIR}/index/
 

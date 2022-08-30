@@ -48,7 +48,6 @@ extern subchunks *index_sampling_super_features(struct chunk *c);
 extern subchunks *index_sampling_finesse(struct chunk *c);
 unsigned int rabin_function(unsigned char *data, unsigned int size, int index);
 int index_lookup_resemble(struct segment *s);
-void index_update_post_compress(GHashTable *features, int64_t id);
-int index_update_buffer_post_compress(struct segment *s);
+void index_update_post_compress(struct _GSequence * chunks, int64_t id);
 
 #endif
