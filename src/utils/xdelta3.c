@@ -11,6 +11,7 @@
 #include "xdelta3.h"
 #include "../xdelta3/xdelta3.h"
 #include "../xdelta3/xdelta3.c"
+#include "../destor.h"
 //---------------------------------------------------------------------------
 
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
@@ -68,7 +69,7 @@ int code(
     memcpy(Input_Buf, in + in_read, Input_Buf_Read);
     in_len -= Input_Buf_Read;
     in_read += Input_Buf_Read;
-    if (Input_Buf_Read < BufSize)
+    if (Input_Buf_Read <= BufSize)
     {
       xd3_set_flags(&stream, XD3_FLUSH | stream.flags);
     }
@@ -163,7 +164,6 @@ int code(
 };
 
 int xdelta3_encode(char *src, char *in, int srclen, int inlen, char *out){
-  int r;
 
   // if (argc != 4)
   // {
@@ -179,22 +179,17 @@ int xdelta3_encode(char *src, char *in, int srclen, int inlen, char *out){
   // FILE *out_file = fopen(argv[3], "w");
   
   // int outlen, srclen, inlen;
-  int outlen;
-
-  // srclen = fread(src, 1, 50000, src_file);
-  // inlen = fread(in, 1, 50000, in_file);
-  /* Encode */
-
-
-  r = code(1, src, in, srclen, inlen, out);
+  int * outlen = malloc(sizeof(int));
+  int r;
+  r = xd3_encode_memory(in, inlen, src, srclen, out, outlen, inlen, 0);
 
   if (r == -1)
   {
-    fprintf(stderr, "Encode error: %d\n", r);
+    fprintf(stderr, "Decode error: %d\n", r);
     return r;
-  }else{
-    outlen = r;
   }
+
+  return *outlen;
 
   // fwrite(out, sizeof(char), outlen, out_file);
 
@@ -236,20 +231,17 @@ int xdelta3_decode(char *src, char *in, int srclen, int inlen, char *out){
   // inlen = fread(in, 1, 50000, in_file);
   /* Encode */
 
-  int outlen;
+  int * outlen = malloc(sizeof(int));
   int r;
-
-  r = code(0, src, in, srclen, inlen, out);
+  r = xd3_decode_memory(in, inlen, src, srclen, out, outlen, destor.chunk_max_size, 0);
 
   if (r == -1)
   {
     fprintf(stderr, "Decode error: %d\n", r);
     return r;
-  }else{
-    outlen = r;
   }
 
-  return outlen;
+  return *outlen;
 
   // fwrite(out, sizeof(char), outlen, out_file);
 

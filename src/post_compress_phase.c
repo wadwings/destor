@@ -86,6 +86,7 @@ extern struct
 void *post_compress_thread(void *arg)
 {
   struct segment **tmp = (struct segment **) malloc(sizeof(struct segment *));
+	*tmp = NULL;
   struct segment *s = NULL;
   while (1)
   {

@@ -19,7 +19,6 @@ static struct segment* segment_fixed(struct chunk * c, struct segment **tmp) {
     }
         /* The end of stream */
 
-
     if (CHECK_CHUNK(c, CHUNK_SEGMENT_START) || CHECK_CHUNK(c, CHUNK_SEGMENT_END)){
       return NULL;
     }

@@ -7,7 +7,7 @@ AM_INIT_AUTOMAKE([destor], [2.0])
 
 # Checks for programs.
 AC_PROG_CC
-CFLAGS="-g -O2 -Wall -DNDEBUG=0  -DSIZEOF_SIZE_T=8 -DSIZEOF_UNSIGNED_LONG_LONG=8 "
+CFLAGS="-g -Wall -fsanitize=address -DNDEBUG=0  -DSIZEOF_SIZE_T=8 -DSIZEOF_UNSIGNED_LONG_LONG=8 "
 
 # Checks for libraries.
 AC_CHECK_LIB([pthread], [pthread_create])
@@ -55,7 +55,6 @@ AC_TYPE_UINT64_T
 AC_TYPE_UINT8_T
 
 # Checks for library functions.
-AC_FUNC_MALLOC
 #AC_CHECK_FUNCS([gettimeofday memmove memset socket strerror])
 
 AC_OUTPUT(Makefile

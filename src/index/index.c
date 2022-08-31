@@ -200,18 +200,18 @@ static void resemble_detection(struct segment *s)
      * recently backup fingerprints.
      */
 
-		if(!CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS)){
-			for(int i = 0; i < SUPER_FINGERPRINT_SIZE; i++){
-				struct fp_id_elem * em = g_hash_table_lookup(superfps_to_chunk, &subchunks->super_features[i]);
-				if(em){
-					c->id = em->id;
-					g_queue_push_head(em->ids, &c->id);
-					kvstore_update_fp_to_fp(c->fp, em->fp);
-					SET_CHUNK(c, CHUNK_DELTA_COMPRESS);
-					break;
-				}
-			}
-		}
+//		if(!CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS)){
+//			for(int i = 0; i < SUPER_FINGERPRINT_SIZE; i++){
+//				struct fp_id_elem * em = g_hash_table_lookup(superfps_to_chunk, &subchunks->super_features[i]);
+//				if(em){
+//					c->id = em->id;
+//					g_queue_push_head(em->ids, &c->id);
+//					kvstore_update_fp_to_fp(c->fp, em->fp);
+//					SET_CHUNK(c, CHUNK_DELTA_COMPRESS);
+//					break;
+//				}
+//			}
+//		}
 
     if (!CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS))
     {
@@ -252,18 +252,18 @@ static void resemble_detection(struct segment *s)
 			free(fp);
 		}
 
-		if(!CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS)){
-			for(int i = 0; i < SUPER_FINGERPRINT_SIZE; i++){
-				struct fp_id_elem * em = malloc(sizeof(struct fp_id_elem));
-				em->id = c->id;
-				em->ids = g_queue_new();
-				memcpy(&em->fp, &c->fp, sizeof(fingerprint));
-				memcpy(&em->sfp, &subchunks->super_features[i], sizeof(fingerprint));
-				g_hash_table_replace(superfps_to_chunk, &em->sfp, em);
-				test_index++;
-				NOTICE("add 1, now is %d",test_index);
-			}
-		}
+//		if(!CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS)){
+//			for(int i = 0; i < SUPER_FINGERPRINT_SIZE; i++){
+//				struct fp_id_elem * em = malloc(sizeof(struct fp_id_elem));
+//				em->id = c->id;
+//				em->ids = g_queue_new();
+//				memcpy(&em->fp, &c->fp, sizeof(fingerprint));
+//				memcpy(&em->sfp, &subchunks->super_features[i], sizeof(fingerprint));
+//				g_hash_table_replace(superfps_to_chunk, &em->sfp, em);
+//				test_index++;
+//				NOTICE("add 1, now is %d",test_index);
+//			}
+//		}
 
     // for debug
     /* Insert it into the index buffer  */
@@ -493,19 +493,19 @@ void index_update_post_compress(struct _GSequence * chunks, int64_t id)
 			fingerprint * sfp = g_queue_peek_nth(tq, i);
 			index_overhead.update_requests++;
 			kvstore_update_post_compress(*sfp, id, c->fp);
-			if(!CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS)){
-				struct fp_id_elem * em = g_hash_table_lookup(superfps_to_chunk, sfp);
-				if(em){
-					while(!g_queue_is_empty(em->ids)){
-						int64_t * t = g_queue_pop_tail(em->ids);
-//						*t = id;
-					}
-					g_queue_free(em->ids);
-					g_hash_table_remove(superfps_to_chunk, sfp);
-					test_index--;
-					NOTICE("remove 1, now is %d",test_index);
-				}
-			}
+//			if(!CHECK_CHUNK(c, CHUNK_DELTA_COMPRESS)){
+//				struct fp_id_elem * em = g_hash_table_lookup(superfps_to_chunk, sfp);
+//				if(em){
+//					while(!g_queue_is_empty(em->ids)){
+//						int64_t * t = g_queue_pop_tail(em->ids);
+////						*t = id;
+//					}
+//					g_queue_free(em->ids);
+//					g_hash_table_remove(superfps_to_chunk, sfp);
+//					test_index--;
+//					NOTICE("remove 1, now is %d",test_index);
+//				}
+//			}
 		}
 	}
 }

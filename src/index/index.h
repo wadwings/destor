@@ -40,7 +40,7 @@ typedef struct post_compress_entry{
 }post_compress_entry;
 
 extern GHashTable* (*sampling)(GSequence *chunks, int32_t chunk_num);
-extern struct segment* (*segmenting)(struct chunk *c, struct segment *tmp);
+extern struct segment* (*segmenting)(struct chunk *c, struct segment **tmp);
 
 gboolean g_feature_equal(char* a, char* b);
 guint g_feature_hash(char *feature);
